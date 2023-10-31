@@ -121,6 +121,7 @@ class Algorithm:
         self.env = env
         self.gamma = gamma
         self.pi = None
+        self.name = None
 
 
     def learn(self, epochs: int = 1000, lr: float = 0.05):

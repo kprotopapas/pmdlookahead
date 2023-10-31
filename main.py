@@ -1,7 +1,6 @@
 from environments.gridworlds import GridworldEnv
 from policies.classic import REINFORCE, PQA, EQA
 import argparse
-import os
 
 if __name__ == '__main__':
     n_agents = 20
@@ -23,8 +22,11 @@ if __name__ == '__main__':
     parser.add_argument('-l', type=float, default=0.05)
 
 
+    best_reward = -100000000
     for agent in range(n_agents):
         env = env_class(size=size, horizon=horizon)
-        ppg = alg(env, gamma=0.9)
-        rewards = ppg.learn(epochs=epochs, lr=lr)
-        ppg.pi.save(f'Gridworld-{size}.npy')
+        algorithm = alg(env, gamma=0.9)
+        rewards = algorithm.learn(epochs=epochs, lr=lr)
+        if sum(rewards[-10:]) > best_reward:
+            best_reward = sum(rewards[-10:])
+            algorithm.pi.save(f'weights/Gridworld-{size**2}-{env_class.__name__}')
