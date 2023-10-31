@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('--horizon', '-t', type=int, default=100)
     parser.add_argument('--alg', '-a', type=str, default='reinforce')
     parser.add_argument('--gamma', '-g', type=float, default=0.9)
-    parser.add_argument('--epochs', '-e', type=int, default=1000)
+    parser.add_argument('--epochs', type=int, default=1000)
     parser.add_argument('-l', type=float, default=0.05)
 
 

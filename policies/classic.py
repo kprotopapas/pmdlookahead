@@ -165,6 +165,7 @@ class REINFORCE(Algorithm):
         self.gamma = gamma
         self.env = env
         self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
+        self.name = 'REINFORCE-PPG'
     
 
     def grad(self, states, actions, rtg):
@@ -184,6 +185,7 @@ class PQA(Algorithm):
         self.gamma = gamma
         self.env = env
         self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
+        self.name = 'PQA'
     
 
     def grad(self, states, actions, rtg):
@@ -203,6 +205,7 @@ class EQA(Algorithm):
         self.gamma = gamma
         self.env = env
         self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
+        self.name = 'EQA'
 
     
     def grad(self, states, actions, rtg):
