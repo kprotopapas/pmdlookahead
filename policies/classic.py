@@ -52,6 +52,40 @@ class DirectPolicy(Policy):
         with open(path, 'rb') as f:
             self.probabilities = np.load(f, allow_pickle=True)
 
+
+class SoftmaxPolicy(Policy):
+    def __init__(self, states, actions):
+        n_states = states.n
+        n_actions = actions.n
+
+        self.n_states = n_states
+        self.n_actions = n_actions
+        self.params = np.zeros((n_states, n_actions)) / n_actions
+        self.actions = actions
+    
+
+    def sample(self, state):
+        params = self.params[state]
+        exps = np.exp(params)
+        probas = exps / np.sum(exps)
+        action = np.random.choice(np.arange(self.n_actions), p=probas)
+        return action
+
+
+    def update(self, grad, lr: float):
+        new = self.params + lr * grad
+        self.params = new
+
+    
+    def save(self, path):
+        with open(path, 'wb') as f:
+            np.save(f, self.params, allow_pickle=True)
+
+    
+    def load(self, path):
+        with open(path, 'rb') as f:
+            self.params = np.load(f, allow_pickle=True)
+
     
 def reward_to_go(rewards: [float], discount: float):
     discounts = np.power(discount, np.arange(len(rewards)))
@@ -98,8 +132,8 @@ class Algorithm:
             # track hyperparameters and run metadata
             config={
                 "learning_rate": lr,
-                "algorithm": "REINFORCE-PPG",
-                "environment": f"Gridworld-{self.env.size}",
+                "algorithm": self.name,
+                "environment": self.env.name,
                 "epochs": epochs,
             }
         )
@@ -124,7 +158,7 @@ class Algorithm:
 
 
 class REINFORCE(Algorithm):
-    #Projected Policy Gradient Ascent using REINFORCE
+    # Projected Policy Gradient Ascent using REINFORCE
     def __init__(self, env: GridworldEnv, gamma: float = 0.9):
         super().__init__(env, gamma)
         self.gamma = gamma
@@ -138,5 +172,43 @@ class REINFORCE(Algorithm):
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
             s, a, r = z
             gradient[s, a] += self.gamma**t * r / self.pi.probabilities[s, a]
+
+        return gradient
+
+
+class PQA(Algorithm):
+    # Projected Q-Ascent using MC rollouts to estimate Q
+    def __init__(self, env: GridworldEnv, gamma: float = 0.9):
+        super().__init__(env, gamma)
+        self.gamma = gamma
+        self.env = env
+        self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
+    
+
+    def grad(self, states, actions, rtg):
+        gradient = np.zeros_like(self.pi.probabilities)
+
+        for t, z in enumerate(zip(states[:-1], actions, rtg)):
+            s, a, r = z
+            gradient[s, a] += self.gamma**t * r
+
+        return gradient
+    
+
+class EQA(Algorithm):
+    # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
+    def __init__(self, env: GridworldEnv, gamma: float = 0.9):
+        super().__init__(env, gamma)
+        self.gamma = gamma
+        self.env = env
+        self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
+
+    
+    def grad(self, states, actions, rtg):
+        gradient = np.zeros_like(self.pi.params)
+
+        for t, z in enumerate(zip(states[:-1], actions, rtg)):
+            s, a, r = z
+            gradient[s, a] += self.gamma**t * r
 
         return gradient

@@ -14,6 +14,7 @@ class GridworldEnv(gym.Env):
         self.target = 0 # TODO remove
         self._state, _ = self.reset()
         self._grid = np.arange(size * size).reshape((size, size))
+        self.name = f'Gridworld-{size * size}'
         
 
 
