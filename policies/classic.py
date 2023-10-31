@@ -124,7 +124,7 @@ class Algorithm:
         self.name = None
 
 
-    def learn(self, epochs: int = 1000, lr: float = 0.05):
+    def learn(self, epochs: int = 1000, lr: float = 0.05, exact=False):
         totals = []
         wandb.init(
             # set the wandb project where this run will be logged
@@ -132,10 +132,11 @@ class Algorithm:
             
             # track hyperparameters and run metadata
             config={
-                "learning_rate": lr,
-                "algorithm": self.name,
-                "environment": self.env.name,
-                "epochs": epochs,
+                'learning_rate': lr,
+                'algorithm': self.name,
+                'environment': self.env.name,
+                'epochs': epochs,
+                'exact': exact
             }
         )
 
@@ -145,7 +146,7 @@ class Algorithm:
             totals.append(reward)
 
             rtg = reward_to_go(rewards, self.gamma)
-            gradient = self.grad(states, actions, rtg)
+            gradient = self.grad(states, actions, rtg, exact=exact)
             self.pi.update(gradient, 0.05)
 
             wandb.log({'reward': reward, 'k': k})
@@ -154,7 +155,7 @@ class Algorithm:
         return totals
 
 
-    def grad(self, states, actions, rtg):
+    def grad(self, states, actions, rtg, exact=False):
         raise NotImplementedError
 
 
@@ -168,7 +169,7 @@ class REINFORCE(Algorithm):
         self.name = 'REINFORCE-PPG'
     
 
-    def grad(self, states, actions, rtg):
+    def grad(self, states, actions, rtg, exact=False): # TODO implement exact
         gradient = np.zeros_like(self.pi.probabilities)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
@@ -188,7 +189,7 @@ class PQA(Algorithm):
         self.name = 'PQA'
     
 
-    def grad(self, states, actions, rtg):
+    def grad(self, states, actions, rtg, exact=False): # TODO implement exact
         gradient = np.zeros_like(self.pi.probabilities)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
@@ -208,7 +209,7 @@ class EQA(Algorithm):
         self.name = 'EQA'
 
     
-    def grad(self, states, actions, rtg):
+    def grad(self, states, actions, rtg, exact=False): # TODO implement exact
         gradient = np.zeros_like(self.pi.params)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):

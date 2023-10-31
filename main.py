@@ -3,13 +3,13 @@ from policies.classic import REINFORCE, PQA, EQA
 import argparse
 
 if __name__ == '__main__':
-    n_agents = 20
+    n_agents = 1
     size = 16
     horizon = 100
     env_class = GridworldEnv
     alg = EQA
     gamma = 0.9
-    epochs = 1000
+    epochs = 100000
     lr = 0.05
 
     parser = argparse.ArgumentParser(prog='PMD TS runner', description='Runner for PMD TS', epilog='')
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     best_reward = -100000000
     for agent in range(n_agents):
         env = env_class(size=size, horizon=horizon)
-        algorithm = alg(env, gamma=0.9)
+        algorithm = alg(env, gamma=gamma)
         rewards = algorithm.learn(epochs=epochs, lr=lr)
         if sum(rewards[-10:]) > best_reward:
             best_reward = sum(rewards[-10:])
