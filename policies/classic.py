@@ -296,4 +296,37 @@ class EQA(Algorithm):
     
 
     def grad_exact(self, Q):
-        return Q - np.sum(self.pi.probas * Q, axis=1).reshape(-1, 1)
+        return Q
+    
+
+class DEQA(Algorithm):
+    # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
+    def __init__(self, env: GridworldEnv, gamma: float = 0.9, d: int = 3):
+        super().__init__(env, gamma)
+        self.gamma = gamma
+        self.env = env
+        self.d = d
+        self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
+        self.name = f'{d}-EQA'
+
+    
+    def grad(self, states, actions, rtg):
+        gradient = np.zeros_like(self.pi.params)
+
+        for t, z in enumerate(zip(states[:-1], actions, rtg)):
+            s, a, r = z
+            gradient[s, a] += self.gamma**t * r
+
+        return gradient
+    
+
+    def grad_exact(self, Q):
+        V = np.sum(self.pi.probas * Q, axis=1)
+        tdm = V
+
+        for _ in range(self.d - 1):
+            tdm = self.env.bellman(tdm, self.gamma)
+
+        next_Vd = np.sum(self.env.P * tdm.reshape((self.env.n_obs, 1, 1)), axis=0)
+        Qd = self.env.R + self.gamma * next_Vd
+        return Qd

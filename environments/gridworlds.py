@@ -4,7 +4,7 @@ import numpy as np
 
 
 class GridworldEnv(gym.Env):
-    def __init__(self, size = 4, horizon = 300):
+    def __init__(self, size: int = 4, horizon: int = 300):
         self.size = size
         self.horizon = horizon
         self.observation_space = spaces.Discrete(size * size)
@@ -81,3 +81,10 @@ class GridworldEnv(gym.Env):
         Q = self.R + gamma * next_V
 
         return Q
+    
+
+    def bellman(self, V, gamma):
+        next_V = np.sum(self.P * V.reshape((self.n_obs, 1, 1)), axis=0)
+        Q = self.R + gamma * next_V
+        TV = np.max(Q, axis=1)
+        return TV
