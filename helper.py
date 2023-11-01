@@ -11,3 +11,6 @@ def simplex_project_sort(v, z=1):
     theta = cssv[cond][-1] / float(rho)
     w = np.maximum(v - theta, 0)
     return w
+
+def logsumexp(t, axis=1):
+    return np.log(np.sum(np.exp(t), axis=axis))

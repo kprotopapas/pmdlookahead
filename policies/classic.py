@@ -21,6 +21,10 @@ class Policy:
     
     def update(self, grad):
         raise NotImplementedError
+    
+    @property
+    def probas(self):
+        raise NotImplementedError
 
 
 class DirectPolicy(Policy):
@@ -55,6 +59,11 @@ class DirectPolicy(Policy):
         with open(path, 'rb') as f:
             self.probabilities = np.load(f, allow_pickle=True)
 
+    
+    @property
+    def probas(self):
+        return self.probabilities
+
 
 class SoftmaxPolicy(Policy):
     def __init__(self, states, actions):
@@ -63,21 +72,19 @@ class SoftmaxPolicy(Policy):
 
         self.n_states = n_states
         self.n_actions = n_actions
-        self.params = np.zeros((n_states, n_actions)) / n_actions
+        self.params = np.zeros((n_states, n_actions))
         self.actions = actions
     
 
     def sample(self, state):
-        params = self.params[state]
-        exps = np.exp(params)
-        probas = exps / np.sum(exps)
-        action = np.random.choice(np.arange(self.n_actions), p=probas)
+        action = np.random.choice(np.arange(self.n_actions), p=self.probas[state])
         return action
 
 
     def update(self, grad, lr: float):
         new = self.params + lr * grad
-        self.params = new
+        new_norm = new - logsumexp(new).reshape(-1, 1)
+        self.params = new_norm
 
     
     def save(self, path):
@@ -89,7 +96,50 @@ class SoftmaxPolicy(Policy):
         with open(path, 'rb') as f:
             self.params = np.load(f, allow_pickle=True)
 
+    @property
+    def probas(self):
+        exps = np.exp(self.params)
+        probas = exps / np.sum(exps, axis=1).reshape(-1, 1)
+        return probas
+
+
+class NPGPolicy(Policy):
+    def __init__(self, states, actions):
+        n_states = states.n
+        n_actions = actions.n
+
+        self.n_states = n_states
+        self.n_actions = n_actions
+        self._probas = np.ones((n_states, n_actions)) / n_actions
+        self.actions = actions
     
+
+    def sample(self, state):
+        action = np.random.choice(np.arange(self.n_actions), p=self.probas[state])
+        return action
+
+
+    def update(self, grad, lr: float):
+        new = self._probas * np.exp(lr * grad)
+        new_norm = new / np.sum(new, axis=1).reshape(-1, 1)
+        self._probas = new_norm
+
+    
+    def save(self, path):
+        with open(path, 'wb') as f:
+            np.save(f, self._probas, allow_pickle=True)
+
+    
+    def load(self, path):
+        with open(path, 'rb') as f:
+            self._probas = np.load(f, allow_pickle=True)
+
+    
+    @property
+    def probas(self):
+        return self._probas
+
+
 def reward_to_go(rewards: [float], discount: float):
     discounts = np.power(discount, np.arange(len(rewards)))
     discounted = rewards * discounts
@@ -144,21 +194,36 @@ class Algorithm:
         )
 
         for k in range(epochs):
-            states, actions, rewards = sample_trajectory(self.env, self.pi)
-            reward = np.sum(rewards)
-            totals.append(reward)
+            if k == epochs - 1:
+                pass
+            if exact:
+                Q = self.env.value(self.pi.probas, self.gamma)
+                gradient = self.grad_exact(Q)
+                reward = np.min(np.sum(self.pi.probas * Q, axis=1))
+                lrk = lr
+            else:
+                states, actions, rewards = sample_trajectory(self.env, self.pi)
+                reward = np.sum(rewards)
+                totals.append(reward)
 
-            rtg = reward_to_go(rewards, self.gamma)
-            gradient = self.grad(states, actions, rtg, exact=exact)
-            self.pi.update(gradient, 0.05)
+                rtg = reward_to_go(rewards, self.gamma)
+                gradient = self.grad(states, actions, rtg)
+                lrk = lr
+            self.pi.update(gradient, lrk)
 
-            wandb.log({'reward': reward, 'k': k})
+            worst_steps = self.env.size * 2 - 2
+            best_worst = np.sum([self.gamma**i for i in range(worst_steps - 1)])
+
+            wandb.log({'reward': reward, 'k': k, 'suboptimality': best_worst + reward})
 
         wandb.finish()
         return totals
 
 
     def grad(self, states, actions, rtg, exact=False):
+        raise NotImplementedError
+    
+    def grad_exact(self, Q):
         raise NotImplementedError
 
 
@@ -172,7 +237,7 @@ class REINFORCE(Algorithm):
         self.name = 'REINFORCE-PPG'
     
 
-    def grad(self, states, actions, rtg, exact=False): # TODO implement exact
+    def grad(self, states, actions, rtg):
         gradient = np.zeros_like(self.pi.probabilities)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
@@ -180,6 +245,10 @@ class REINFORCE(Algorithm):
             gradient[s, a] += self.gamma**t * r / self.pi.probabilities[s, a]
 
         return gradient
+
+
+    def grad_exact(self, Q):
+        pass # TODO
 
 
 class PQA(Algorithm):
@@ -192,7 +261,7 @@ class PQA(Algorithm):
         self.name = 'PQA'
     
 
-    def grad(self, states, actions, rtg, exact=False): # TODO implement exact
+    def grad(self, states, actions, rtg): # TODO implement exact
         gradient = np.zeros_like(self.pi.probabilities)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
@@ -200,6 +269,10 @@ class PQA(Algorithm):
             gradient[s, a] += self.gamma**t * r
 
         return gradient
+    
+    
+    def grad_exact(self, Q):
+        return Q
     
 
 class EQA(Algorithm):
@@ -212,7 +285,7 @@ class EQA(Algorithm):
         self.name = 'EQA'
 
     
-    def grad(self, states, actions, rtg, exact=False): # TODO implement exact
+    def grad(self, states, actions, rtg):
         gradient = np.zeros_like(self.pi.params)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
@@ -220,3 +293,7 @@ class EQA(Algorithm):
             gradient[s, a] += self.gamma**t * r
 
         return gradient
+    
+
+    def grad_exact(self, Q):
+        return Q - np.sum(self.pi.probas * Q, axis=1).reshape(-1, 1)
