@@ -3,11 +3,11 @@ from policies.classic import REINFORCE, PQA, EQA
 import argparse
 
 if __name__ == '__main__':
-    n_agents = 1
-    size = 64
+    n_agents = 1100
+    size = 32
     horizon = 100
     env_class = GridworldEnv
-    alg = PQA
+    alg = EQA
     gamma = 0.99
     epochs = 2000
     lr = 0.05
@@ -27,7 +27,17 @@ if __name__ == '__main__':
     best_reward = -100000000
     for agent in range(n_agents):
         env = env_class(size=size, horizon=horizon)
-        algorithm = alg(env, gamma=gamma)
+        algorithm = PQA(env, gamma=gamma)
+        rewards = algorithm.learn(epochs=epochs, lr=lr, exact=True)
+        if sum(rewards[-10:]) > best_reward:
+            best_reward = sum(rewards[-10:])
+            algorithm.pi.save(f'weights/Gridworld-{size**2}-{alg.__name__}.npy')
+
+        
+    best_reward = -100000000
+    for agent in range(n_agents):
+        env = env_class(size=size, horizon=horizon)
+        algorithm = EQA(env, gamma=gamma)
         rewards = algorithm.learn(epochs=epochs, lr=lr, exact=True)
         if sum(rewards[-10:]) > best_reward:
             best_reward = sum(rewards[-10:])
