@@ -9,7 +9,7 @@ if __name__ == '__main__':
     env_class = GridworldEnv
     alg = EQA
     gamma = 0.99
-    epochs = 2000
+    epochs = 500
     lr = 0.05
     exact = True
 
