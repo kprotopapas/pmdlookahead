@@ -1,4 +1,4 @@
-from environments.gridworlds import GridworldEnv
+from environments.discrete import GridworldEnv, DiscreteStochastic
 from baselines.algorithms import REINFORCE, PQA, EQA, DEQA
 import argparse
 
@@ -6,7 +6,7 @@ if __name__ == '__main__':
     n_agents = 1
     size = 32
     horizon = 100
-    env_class = GridworldEnv
+    env_class = DiscreteStochastic
     alg = DEQA
     gamma = 0.99
     epochs = 500
@@ -23,20 +23,19 @@ if __name__ == '__main__':
     parser.add_argument('-l', type=float, default=0.05)
     parser.add_argument('--exact', action='store_true')
 
-
+    lr = lambda k: 0.5 / gamma**(k * 3)
     best_reward = -100000000
     for agent in range(n_agents):
-        env = env_class(size=size, horizon=horizon)
-        algorithm = DEQA(env, gamma=gamma, d=3)
+        env = DiscreteStochastic()
+        algorithm = EQA(env, gamma=gamma)
         rewards = algorithm.learn(epochs=epochs, lr=lr, exact=True)
         if sum(rewards[-10:]) > best_reward:
             best_reward = sum(rewards[-10:])
             algorithm.pi.save(f'weights/Gridworld-{size**2}-{alg.__name__}.npy')
 
-    
     for agent in range(n_agents):
         env = env_class(size=size, horizon=horizon)
-        algorithm = EQA(env, gamma=gamma)
+        algorithm = DEQA(env, gamma=gamma, d=4)
         rewards = algorithm.learn(epochs=epochs, lr=lr, exact=True)
         if sum(rewards[-10:]) > best_reward:
             best_reward = sum(rewards[-10:])

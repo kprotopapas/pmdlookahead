@@ -1,5 +1,5 @@
 import gymnasium as gym
-from environments.gridworlds import GridworldEnv
+from environments.discrete import DiscreteStochastic
 from helper import np
 from baselines.policies import DirectPolicy, Policy, SoftmaxPolicy
 
@@ -9,39 +9,12 @@ import wandb
 from typing import Callable
 
 
-def reward_to_go(rewards: [float], discount: float):
-    discounts = np.power(discount, np.arange(len(rewards)))
-    discounted = rewards * discounts
-    rtg = np.cumsum(discounted[::-1])[::-1] / discounts
-    return rtg
-
-
-def sample_trajectory(env: gym.Env, policy: Policy):
-    rewards = []
-    states = []
-    actions = []
-
-    state, info = env.reset()
-    states.append(state)
-
-    terminal = info['terminal']
-
-    while not terminal:
-        action = policy.sample(state)
-        state, reward, info = env.step(action)
-        terminal = info['terminal']
-
-        rewards.append(reward)
-        actions.append(action)
-        states.append(state)
-
-    return np.array(states), np.array(actions), np.array(rewards)
-
-
 class Algorithm:
-    def __init__(self, env: GridworldEnv, gamma: float = 0.9):
+    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100):
         self.env = env
         self.gamma = gamma
+        self.horizon = horizon
+
         self.pi: Policy = None
         self.name = None
 
@@ -53,7 +26,7 @@ class Algorithm:
             project="pmd-ts",
             # track hyperparameters and run metadata
             config={
-                'learning_rate': lr,
+                'learning_rate': 'adaptive' if callable(lr) else lr,
                 'algorithm': self.name,
                 'environment': self.env.name,
                 'epochs': epochs,
@@ -70,25 +43,60 @@ class Algorithm:
                 reward = np.min(np.sum(self.pi.probas * Q, axis=1))
 
             else:
-                states, actions, rewards = sample_trajectory(self.env, self.pi)
-                reward = np.sum(rewards)
-                totals.append(reward)
-
-                rtg = reward_to_go(rewards, self.gamma)
+                states, actions, rewards = self.sample_trajectory()
+                rtg = self.reward_to_go(rewards)
                 gradient = self.grad(states, actions, rtg)
+
+                reward = rtg[0]
+                totals.append(reward)
 
 
             lrk = lr(k) if callable(lr) else self.lrk(lr, k)
             self.pi.update(gradient, lrk)
 
-            worst_steps = self.env.size * 2 - 2
-            best_worst = np.sum([self.gamma**i for i in range(worst_steps - 1)])
+            optimal = self.env.opt
+            best_worst = np.sum([self.gamma**i for i in range(optimal - 1)])
 
             wandb.log({'reward': reward, 'k': k, 'suboptimality': best_worst + reward})
 
         wandb.finish()
         return totals
 
+
+    def reward_to_go(self, rewards: [float]):
+        discounts = np.power(self.gamma, np.arange(len(rewards)))
+        discounted = rewards * discounts
+        rtg = np.cumsum(discounted[::-1])[::-1] / discounts
+        return rtg
+
+
+    def sample_trajectory(self, state = None):
+        rewards = []
+        states = []
+        actions = []
+
+        old_state, info = self.env.reset()
+        if state == None:
+            self.env.state = state
+        else:
+            state = old_state
+
+        states.append(state)
+
+        terminal = 'terminal' in info and info['terminal']
+        for t in range(self.horizon):
+            action = self.pi.sample(state)
+            state, reward, info = self.env.step(action)
+            terminal = 'terminal' in info and info['terminal']
+            if terminal:
+                break
+
+            rewards.append(reward)
+            actions.append(action)
+            states.append(state)
+
+        return np.array(states), np.array(actions), np.array(rewards)
+    
 
     def grad(self, states, actions, rtg, exact=False):
         raise NotImplementedError
@@ -102,20 +110,18 @@ class Algorithm:
 
 class REINFORCE(Algorithm):
     # Projected Policy Gradient Ascent using REINFORCE
-    def __init__(self, env: GridworldEnv, gamma: float = 0.9):
-        super().__init__(env, gamma)
-        self.gamma = gamma
-        self.env = env
+    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100):
+        super().__init__(env, gamma, horizon)
         self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
         self.name = 'REINFORCE-PPG'
 
 
     def grad(self, states, actions, rtg):
-        gradient = np.zeros_like(self.pi.probabilities)
+        gradient = np.zeros_like(self.pi.probas)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
             s, a, r = z
-            gradient[s, a] += self.gamma**t * r / self.pi.probabilities[s, a]
+            gradient[s, a] += self.gamma**t * r / self.pi.probas[s, a]
 
         return gradient
 
@@ -126,16 +132,14 @@ class REINFORCE(Algorithm):
 
 class PQA(Algorithm):
     # Projected Q-Ascent using MC rollouts to estimate Q
-    def __init__(self, env: GridworldEnv, gamma: float = 0.9):
-        super().__init__(env, gamma)
-        self.gamma = gamma
-        self.env = env
+    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100):
+        super().__init__(env, gamma, horizon)
         self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
         self.name = 'PQA'
 
 
-    def grad(self, states, actions, rtg): # TODO implement exact
-        gradient = np.zeros_like(self.pi.probabilities)
+    def grad(self, states, actions, rtg):
+        gradient = np.zeros_like(self.pi.probas)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
             s, a, r = z
@@ -150,16 +154,14 @@ class PQA(Algorithm):
 
 class EQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
-    def __init__(self, env: GridworldEnv, gamma: float = 0.9):
-        super().__init__(env, gamma)
-        self.gamma = gamma
-        self.env = env
+    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100):
+        super().__init__(env, gamma, horizon)
         self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
         self.name = 'EQA'
 
 
     def grad(self, states, actions, rtg):
-        gradient = np.zeros_like(self.pi.params)
+        gradient = np.zeros_like(self.pi.probas)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
             s, a, r = z
@@ -178,17 +180,15 @@ class EQA(Algorithm):
 
 class DEQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
-    def __init__(self, env: GridworldEnv, gamma: float = 0.9, d: int = 3):
-        super().__init__(env, gamma)
-        self.gamma = gamma
-        self.env = env
+    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100, d: int = 3):
+        super().__init__(env, gamma, horizon)
         self.d = d
         self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
         self.name = f'{d}-EQA'
 
 
     def grad(self, states, actions, rtg):
-        gradient = np.zeros_like(self.pi.params)
+        gradient = np.zeros_like(self.pi.probas)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
             s, a, r = z

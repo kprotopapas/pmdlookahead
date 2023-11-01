@@ -1,4 +1,4 @@
-from environments.gridworlds import GridworldEnv
+from environments.discrete import GridworldEnv
 import numpy as np
 from helper import *
 
