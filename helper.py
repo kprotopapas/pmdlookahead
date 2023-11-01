@@ -1,5 +1,7 @@
 import numpy as np
 
+MAX_FOR_EXP = 709
+
 
 def simplex_project_sort(v, z=1):
     n_features = v.shape[0]

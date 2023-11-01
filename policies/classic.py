@@ -83,7 +83,9 @@ class SoftmaxPolicy(Policy):
 
     def update(self, grad, lr: float):
         new = self.params + lr * grad
-        new_centered = new - np.sum(new, axis=1).reshape(-1, 1)
+        limit = MAX_FOR_EXP / self.params.shape[1]
+        new_clipped = new.clip(-limit, limit)
+        new_centered = new_clipped - np.mean(new_clipped, axis=1).reshape(-1, 1)
         self.params = new_centered
 
     
@@ -171,6 +173,9 @@ class Algorithm:
                 rtg = reward_to_go(rewards, self.gamma)
                 gradient = self.grad(states, actions, rtg)
                 lrk = self.lrk(lr, k)
+            
+            if np.any(np.isnan(gradient)):
+                pass
             self.pi.update(gradient, lrk)
 
             worst_steps = self.env.size * 2 - 2
