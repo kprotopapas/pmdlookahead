@@ -1,14 +1,14 @@
 from environments.gridworlds import GridworldEnv
-from policies.classic import REINFORCE, PQA, EQA, DEQA
+from baselines.algorithms import REINFORCE, PQA, EQA, DEQA
 import argparse
 
 if __name__ == '__main__':
     n_agents = 1
-    size = 16
+    size = 32
     horizon = 100
     env_class = GridworldEnv
     alg = DEQA
-    gamma = 0.9
+    gamma = 0.99
     epochs = 500
     lr = 0.5
     exact = True

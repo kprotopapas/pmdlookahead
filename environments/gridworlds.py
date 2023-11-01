@@ -11,7 +11,6 @@ class GridworldEnv(gym.Env):
         self.n_obs = size * size
         self.action_space = spaces.Discrete(4)
         self.target = self.observation_space.sample()
-        self.target = 0 # TODO remove
         self.reset()
         self._grid = np.arange(size * size).reshape((size, size))
         self.name = f'Gridworld-{size * size}'
@@ -23,7 +22,7 @@ class GridworldEnv(gym.Env):
             for a in range(4):
                 sp = self.transition(s, a)
                 self.P[sp, s, a] = 1
-                self.R[s, a] *= (sp != 0)
+                self.R[s, a] *= (sp != self.target)
         
     
         for s in range(self.n_obs):
