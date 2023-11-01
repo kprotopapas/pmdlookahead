@@ -3,14 +3,14 @@ from policies.classic import REINFORCE, PQA, EQA, DEQA
 import argparse
 
 if __name__ == '__main__':
-    n_agents = 10
-    size = 32
+    n_agents = 1
+    size = 16
     horizon = 100
     env_class = GridworldEnv
     alg = DEQA
-    gamma = 0.99
+    gamma = 0.9
     epochs = 500
-    lr = 0.05
+    lr = 0.5
     exact = True
 
     parser = argparse.ArgumentParser(prog='PMD TS runner', description='Runner for PMD TS', epilog='')
@@ -25,11 +25,19 @@ if __name__ == '__main__':
 
 
     best_reward = -100000000
-    for d in range(2, 5):
-        for agent in range(n_agents):
-            env = env_class(size=size, horizon=horizon)
-            algorithm = DEQA(env, gamma=gamma, d=d)
-            rewards = algorithm.learn(epochs=epochs, lr=lr, exact=True)
-            if sum(rewards[-10:]) > best_reward:
-                best_reward = sum(rewards[-10:])
-                algorithm.pi.save(f'weights/Gridworld-{size**2}-{alg.__name__}.npy')
+    for agent in range(n_agents):
+        env = env_class(size=size, horizon=horizon)
+        algorithm = DEQA(env, gamma=gamma, d=3)
+        rewards = algorithm.learn(epochs=epochs, lr=lr, exact=True)
+        if sum(rewards[-10:]) > best_reward:
+            best_reward = sum(rewards[-10:])
+            algorithm.pi.save(f'weights/Gridworld-{size**2}-{alg.__name__}.npy')
+
+    
+    for agent in range(n_agents):
+        env = env_class(size=size, horizon=horizon)
+        algorithm = EQA(env, gamma=gamma)
+        rewards = algorithm.learn(epochs=epochs, lr=lr, exact=True)
+        if sum(rewards[-10:]) > best_reward:
+            best_reward = sum(rewards[-10:])
+            algorithm.pi.save(f'weights/Gridworld-{size**2}-{alg.__name__}.npy')

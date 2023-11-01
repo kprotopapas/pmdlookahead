@@ -83,8 +83,8 @@ class SoftmaxPolicy(Policy):
 
     def update(self, grad, lr: float):
         new = self.params + lr * grad
-        new_norm = new - logsumexp(new).reshape(-1, 1)
-        self.params = new_norm
+        new_centered = new - np.sum(new, axis=1).reshape(-1, 1)
+        self.params = new_centered
 
     
     def save(self, path):
@@ -101,43 +101,6 @@ class SoftmaxPolicy(Policy):
         exps = np.exp(self.params)
         probas = exps / np.sum(exps, axis=1).reshape(-1, 1)
         return probas
-
-
-class NPGPolicy(Policy):
-    def __init__(self, states, actions):
-        n_states = states.n
-        n_actions = actions.n
-
-        self.n_states = n_states
-        self.n_actions = n_actions
-        self._probas = np.ones((n_states, n_actions)) / n_actions
-        self.actions = actions
-    
-
-    def sample(self, state):
-        action = np.random.choice(np.arange(self.n_actions), p=self.probas[state])
-        return action
-
-
-    def update(self, grad, lr: float):
-        new = self._probas * np.exp(lr * grad)
-        new_norm = new / np.sum(new, axis=1).reshape(-1, 1)
-        self._probas = new_norm
-
-    
-    def save(self, path):
-        with open(path, 'wb') as f:
-            np.save(f, self._probas, allow_pickle=True)
-
-    
-    def load(self, path):
-        with open(path, 'rb') as f:
-            self._probas = np.load(f, allow_pickle=True)
-
-    
-    @property
-    def probas(self):
-        return self._probas
 
 
 def reward_to_go(rewards: [float], discount: float):
@@ -182,7 +145,6 @@ class Algorithm:
         wandb.init(
             # set the wandb project where this run will be logged
             project="pmd-ts",
-            
             # track hyperparameters and run metadata
             config={
                 'learning_rate': lr,
@@ -200,7 +162,7 @@ class Algorithm:
                 Q = self.env.value(self.pi.probas, self.gamma)
                 gradient = self.grad_exact(Q)
                 reward = np.min(np.sum(self.pi.probas * Q, axis=1))
-                lrk = lr
+                lrk = self.lrk(lr, k)
             else:
                 states, actions, rewards = sample_trajectory(self.env, self.pi)
                 reward = np.sum(rewards)
@@ -208,7 +170,7 @@ class Algorithm:
 
                 rtg = reward_to_go(rewards, self.gamma)
                 gradient = self.grad(states, actions, rtg)
-                lrk = lr
+                lrk = self.lrk(lr, k)
             self.pi.update(gradient, lrk)
 
             worst_steps = self.env.size * 2 - 2
@@ -225,6 +187,9 @@ class Algorithm:
     
     def grad_exact(self, Q):
         raise NotImplementedError
+    
+    def lrk(self, lr, k):
+        return lr
 
 
 class REINFORCE(Algorithm):
@@ -299,6 +264,10 @@ class EQA(Algorithm):
         return Q
     
 
+    def lrk(self, lr, k):
+        return lr / self.gamma**k
+    
+
 class DEQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
     def __init__(self, env: GridworldEnv, gamma: float = 0.9, d: int = 3):
@@ -330,3 +299,7 @@ class DEQA(Algorithm):
         next_Vd = np.sum(self.env.P * tdm.reshape((self.env.n_obs, 1, 1)), axis=0)
         Qd = self.env.R + self.gamma * next_Vd
         return Qd
+    
+    
+    def lrk(self, lr, k):
+        return lr / self.gamma**(k * self.d)

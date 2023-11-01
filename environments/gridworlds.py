@@ -88,3 +88,8 @@ class GridworldEnv(gym.Env):
         Q = self.R + gamma * next_V
         TV = np.max(Q, axis=1)
         return TV
+
+
+    def set_state(self, state):
+        self.reset()
+        self._state = state
