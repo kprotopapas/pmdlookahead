@@ -18,6 +18,9 @@ class Policy:
 
     def load(self, path):
         raise NotImplementedError
+    
+    def update(self, grad):
+        raise NotImplementedError
 
 
 class DirectPolicy(Policy):
@@ -120,7 +123,7 @@ class Algorithm:
     def __init__(self, env: GridworldEnv, gamma: float = 0.9):
         self.env = env
         self.gamma = gamma
-        self.pi = None
+        self.pi: Policy = None
         self.name = None
 
 

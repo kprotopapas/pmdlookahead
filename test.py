@@ -1,10 +1,14 @@
 from environments.gridworlds import GridworldEnv
+import numpy as np
+from helper import *
 
-gw = GridworldEnv()
+size = 3
+gw = GridworldEnv(size=size)
 
-while True:
-    a = int(input())
-    state, action, info = gw.step(a)
-    print(gw.state_to_pos(state), action)
-    if info['terminal']:
-        print('terminated')
+pi = np.random.sample(size=(size**2, 4))
+pi = np.tile(np.array([1, 0, 0, 0]), (size**2, 1))
+for i in range(size**2):
+    pi[i] = simplex_project_sort(pi[i])
+
+Q = gw.value(pi, gamma=0.9)
+print(Q)

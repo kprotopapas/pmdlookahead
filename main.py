@@ -4,7 +4,7 @@ import argparse
 
 if __name__ == '__main__':
     n_agents = 1
-    size = 16
+    size = 6
     horizon = 100
     env_class = GridworldEnv
     alg = EQA
@@ -29,4 +29,4 @@ if __name__ == '__main__':
         rewards = algorithm.learn(epochs=epochs, lr=lr)
         if sum(rewards[-10:]) > best_reward:
             best_reward = sum(rewards[-10:])
-            algorithm.pi.save(f'weights/Gridworld-{size**2}-{env_class.__name__}')
+            algorithm.pi.save(f'weights/Gridworld-{size**2}-{env_class.__name__}.npy')
