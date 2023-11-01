@@ -3,7 +3,7 @@ from policies.classic import REINFORCE, PQA, EQA
 import argparse
 
 if __name__ == '__main__':
-    n_agents = 1100
+    n_agents = 100
     size = 32
     horizon = 100
     env_class = GridworldEnv
