@@ -83,10 +83,8 @@ class SoftmaxPolicy(Policy):
 
     def update(self, grad, lr: float):
         new = self.params + lr * grad
-        limit = MAX_FOR_EXP / self.params.shape[1]
-        new_clipped = new.clip(-limit, limit)
-        new_centered = new_clipped - np.mean(new_clipped, axis=1).reshape(-1, 1)
-        self.params = new_centered
+        new_centered = new - np.max(new, axis=1).reshape(-1, 1)
+        self.params = new_clipped
 
     
     def save(self, path):
