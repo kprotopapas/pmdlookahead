@@ -1,15 +1,14 @@
-from environments.discrete import GridworldEnv
+from environments.discrete import GridworldEnv, DiscreteStochastic
 import numpy as np
 from helper import *
 
-size = 6
-gw = GridworldEnv(size=size)
-print(gw)
+np.set_printoptions(precision=3, suppress=True)
 
-while True:
-    action = int(input())
-    print()
-    state, r, _ = gw.step(action)
-    print(gw)
-    print(f'Reward: {r}, State: {state}')
-    print()
+P = random_simplex((10, 10, 4))
+R = np.random.random((10, 4))
+mu = random_simplex((10,))
+
+env = DiscreteStochastic(P, R, mu)
+print(env.R)
+print(env.step(1))
+print(env.optimal(0.9))

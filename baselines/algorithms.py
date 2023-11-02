@@ -9,7 +9,7 @@ import wandb
 from typing import Callable
 
 
-class Algorithm:
+class Algorithm(object):
     def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100):
         self.env = env
         self.gamma = gamma
@@ -17,6 +17,8 @@ class Algorithm:
 
         self.pi: Policy = None
         self.name = None
+        self.k = 0
+        self.samples = 0
 
 
     def learn(self, epochs: int = 1000, lr: Callable | float = 0.1, exact=False):
@@ -34,30 +36,26 @@ class Algorithm:
             }
         )
 
+        V_opt = self.env.optimal(self.gamma).max(axis=1)
+
         for k in range(epochs):
-            if k == epochs - 1:
-                pass
-            if exact:
-                Q = self.env.value(self.pi.probas, self.gamma)
-                gradient = self.grad_exact(Q)
-                reward = np.min(np.sum(self.pi.probas * Q, axis=1))
+            Q = self.env.value(self.pi.probas, self.gamma)
+            grad_exact = self.grad_exact(Q)
+            grad_est = exact or self.grad()
 
-            else:
-                states, actions, rewards = self.sample_trajectory()
-                rtg = self.reward_to_go(rewards)
-                gradient = self.grad(states, actions, rtg)
-
-                reward = rtg[0]
-                totals.append(reward)
-
-
+            gradient = grad_exact if exact else grad_est
             lrk = lr(k) if callable(lr) else self.lrk(lr, k)
             self.pi.update(gradient, lrk)
 
-            optimal = self.env.opt
-            best_worst = np.sum([self.gamma**i for i in range(optimal - 1)])
+            V = np.sum(self.pi.probas * Q, axis=1)
+            sub = np.max(np.abs(V_opt - V))
+            totals.append(sub)
 
-            wandb.log({'reward': reward, 'k': k, 'suboptimality': best_worst + reward})
+            wandb.log({'epoch': k,
+                       'suboptimality': sub,
+                       'gradient_std': np.std(gradient, axis=1).min(),
+                       'samples': self.samples,
+                       'grad_error': np.max(np.abs(gradient - grad_exact)) / np.abs(grad_exact).max()})
 
         wandb.finish()
         return totals
@@ -70,10 +68,10 @@ class Algorithm:
         return rtg
 
 
-    def sample_trajectory(self, state = None):
-        rewards = []
-        states = []
-        actions = []
+    def sample_trajectory(self, state = None, action = None):
+        reward_list = []
+        state_list = []
+        action_list = []
 
         old_state, info = self.env.reset()
         if state == None:
@@ -81,24 +79,33 @@ class Algorithm:
         else:
             state = old_state
 
-        states.append(state)
+        state_list.append(state)
 
         terminal = 'terminal' in info and info['terminal']
-        for t in range(self.horizon):
-            action = self.pi.sample(state)
+        
+        start = 0
+        if action is not None:
             state, reward, info = self.env.step(action)
+            reward_list.append(reward)
+            action_list.append(action)
+            state_list.append(state)
+            start = 1
+            
+        for t in range(start, self.horizon):
             terminal = 'terminal' in info and info['terminal']
             if terminal:
                 break
+            action = self.pi.sample(state)
+            state, reward, info = self.env.step(action)
+            reward_list.append(reward)
+            action_list.append(action)
+            state_list.append(state)
 
-            rewards.append(reward)
-            actions.append(action)
-            states.append(state)
 
-        return np.array(states), np.array(actions), np.array(rewards)
+        return np.array(state_list), np.array(action_list), np.array(reward_list)
     
 
-    def grad(self, states, actions, rtg, exact=False):
+    def grad(self):
         raise NotImplementedError
 
     def grad_exact(self, Q):
@@ -116,7 +123,9 @@ class REINFORCE(Algorithm):
         self.name = 'REINFORCE-PPG'
 
 
-    def grad(self, states, actions, rtg):
+    def grad(self):
+        states, actions, rewards = self.sample_trajectory()
+        rtg = self.reward_to_go(rewards)
         gradient = np.zeros_like(self.pi.probas)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
@@ -138,7 +147,10 @@ class PQA(Algorithm):
         self.name = 'PQA'
 
 
-    def grad(self, states, actions, rtg):
+    def grad(self):
+        states, actions, rewards = self.sample_trajectory()
+        rtg = self.reward_to_go(rewards)
+
         gradient = np.zeros_like(self.pi.probas)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
@@ -154,20 +166,30 @@ class PQA(Algorithm):
 
 class EQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
-    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100):
+    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = None, n_trajectories: int = None):
+        if horizon is None:
+            horizon = min(int(np.ceil(1 / (1 - gamma))), 100)
         super().__init__(env, gamma, horizon)
         self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
         self.name = 'EQA'
+        if n_trajectories is None:
+            n_trajectories = min(int(np.ceil(1 / gamma**(2 * horizon))), 10)
+        self.n_trajectories = n_trajectories
 
 
-    def grad(self, states, actions, rtg):
-        gradient = np.zeros_like(self.pi.probas)
+    def grad(self):
+        Q = np.zeros_like(self.env.R)
 
-        for t, z in enumerate(zip(states[:-1], actions, rtg)):
-            s, a, r = z
-            gradient[s, a] += self.gamma**t * r
+        for s in range(self.env.n_obs):
+            for a in range(self.env.n_act):
+                for _ in range(self.n_trajectories):
+                    states, actions, rewards = self.sample_trajectory(s, a)
+                    rtg = self.reward_to_go(rewards)
+                    Q[s, a] += rtg[0]
 
-        return gradient
+        Q = Q / self.n_trajectories
+        self.samples += self.horizon * self.n_trajectories
+        return Q
 
 
     def grad_exact(self, Q):
@@ -175,7 +197,7 @@ class EQA(Algorithm):
 
 
     def lrk(self, lr, k):
-        return lr / self.gamma**k
+        return lr / self.gamma**(2*(k + 1))
 
 
 class DEQA(Algorithm):
@@ -187,7 +209,9 @@ class DEQA(Algorithm):
         self.name = f'{d}-EQA'
 
 
-    def grad(self, states, actions, rtg):
+    def grad(self):
+        states, actions, rewards = self.sample_trajectory()
+        rtg = self.reward_to_go(rewards)
         gradient = np.zeros_like(self.pi.probas)
 
         for t, z in enumerate(zip(states[:-1], actions, rtg)):
@@ -204,10 +228,10 @@ class DEQA(Algorithm):
         for _ in range(self.d - 1):
             tdm = self.env.bellman(tdm, self.gamma)
 
-        next_Vd = np.sum(self.env.P * tdm.reshape((self.env.n_obs, 1, 1)), axis=0)
+        next_Vd = np.sum(self.env.P * tdm[..., np.newaxis, np.newaxis], axis=0)
         Qd = self.env.R + self.gamma * next_Vd
         return Qd
 
 
     def lrk(self, lr, k):
-        return lr / self.gamma**(k * self.d)
+        return lr / self.gamma**(2 * (k + 1) * self.d)

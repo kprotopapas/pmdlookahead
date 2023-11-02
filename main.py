@@ -1,17 +1,23 @@
+import numpy as np
+import argparse
+
 from environments.discrete import GridworldEnv, DiscreteStochastic
 from baselines.algorithms import REINFORCE, PQA, EQA, DEQA
-import argparse
+from helper import random_simplex
 
 if __name__ == '__main__':
     n_agents = 1
-    size = 32
+    size = 8
     horizon = 100
-    env_class = DiscreteStochastic
+    env_class = GridworldEnv
     alg = DEQA
     gamma = 0.99
     epochs = 500
-    lr = 0.5
+    lr = lambda k: 1. / gamma**(2 * (k + 1) * d)
     exact = True
+
+    n_actions = 4
+    d = 8
 
     parser = argparse.ArgumentParser(prog='PMD TS runner', description='Runner for PMD TS', epilog='')
     parser.add_argument('--n_agents', '-n', type=int, default=100)
@@ -23,20 +29,21 @@ if __name__ == '__main__':
     parser.add_argument('-l', type=float, default=0.05)
     parser.add_argument('--exact', action='store_true')
 
-    lr = lambda k: 0.5 / gamma**(k * 3)
-    best_reward = -100000000
-    for agent in range(n_agents):
-        env = DiscreteStochastic()
-        algorithm = EQA(env, gamma=gamma)
-        rewards = algorithm.learn(epochs=epochs, lr=lr, exact=True)
-        if sum(rewards[-10:]) > best_reward:
-            best_reward = sum(rewards[-10:])
-            algorithm.pi.save(f'weights/Gridworld-{size**2}-{alg.__name__}.npy')
+    
+    best = np.inf
 
     for agent in range(n_agents):
-        env = env_class(size=size, horizon=horizon)
-        algorithm = DEQA(env, gamma=gamma, d=4)
-        rewards = algorithm.learn(epochs=epochs, lr=lr, exact=True)
-        if sum(rewards[-10:]) > best_reward:
-            best_reward = sum(rewards[-10:])
-            algorithm.pi.save(f'weights/Gridworld-{size**2}-{alg.__name__}.npy')
+        P = random_simplex((size, size, n_actions))
+        R = np.random.random((size, n_actions))
+        mu = random_simplex((size, ))
+        env = DiscreteStochastic(P, R, mu)
+
+        # algorithm = DEQA(env, gamma=gamma, horizon=horizon, d=d)
+        # perf = algorithm.learn(epochs=epochs, lr=lr, exact=True)
+
+        algorithm = EQA(env, gamma=gamma, horizon=10, n_trajectories=100)
+        perf = algorithm.learn(epochs=epochs, lr=lr, exact=False)
+
+        if sum(perf[-10:]) < best:
+            best = sum(perf[-10:])
+            algorithm.pi.save(f'weights/Gridworld-{size}-{alg.__name__}.npy')
