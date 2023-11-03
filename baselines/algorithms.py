@@ -2,6 +2,7 @@ import gymnasium as gym
 from environments.discrete import DiscreteStochastic
 from helper import np
 from baselines.policies import DirectPolicy, Policy, SoftmaxPolicy
+from scipy.special import rel_entr
 
 import numpy as np
 import wandb
@@ -51,19 +52,27 @@ class Algorithm(object):
             grad_est = exact or self.grad()
 
             gradient = grad_exact if exact else grad_est
-            lrk = lr(k) if callable(lr) else self.lrk(lr, k)
+            lrk = lr(k, gradient) if callable(lr) else self.lrk(lr, k, gradient)
+            if lrk == np.inf:
+                pass
             self.pi.update(gradient, lrk)
 
             V = np.sum(self.pi.probas * Q, axis=1)
             sub = np.max(np.abs(V_opt - V))
             totals.append(sub)
 
+            # A = Q - Q.mean(axis=1)[..., np.newaxis]
+            A_est = gradient - gradient.mean(axis=1)[..., np.newaxis]
+            err = gradient - grad_exact
+            err = err - err.mean(axis=1)[..., np.newaxis] # for simplex or exp update mean doesn't matter
+
+
             wandb.log({'epoch': k,
                        'suboptimality': sub,
-                       'grad_std': np.std(gradient, axis=1).min(),
-                       'grad_norm': np.sum(gradient * gradient),
+                       'estimated_adv_norm': np.max(np.abs(A_est)),
                        'samples': self.samples,
-                       'grad_error': np.max(np.abs(gradient - grad_exact)) / np.abs(grad_exact).max()})
+                       'grad_error': np.max(np.abs(err)),
+                       'learning_rate': lrk})
 
         wandb.finish()
         return totals
@@ -119,7 +128,7 @@ class Algorithm(object):
     def grad_exact(self, Q):
         raise NotImplementedError
 
-    def lrk(self, lr, k):
+    def lrk(self, lr, k, grad):
         return lr
 
 
@@ -170,6 +179,9 @@ class PQA(Algorithm):
 
     def grad_exact(self, Q):
         return Q
+    
+    def lrk(self, lr, k, gradient):
+        return lr / self.gamma**(2*k + 1)
 
 
 class EQA(Algorithm):
@@ -209,8 +221,17 @@ class EQA(Algorithm):
         return Q
 
 
-    def lrk(self, lr, k):
-        return lr / self.gamma**(2*(k + 1))
+    def lrk(self, lr, k, gradient):
+        greedy = 1 * (gradient == gradient.max(axis=1)[..., np.newaxis])
+        greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
+        pk = self.pi.probas
+
+        dk = np.max(rel_entr(greedy, pk).sum(axis=1))
+
+        lrk = lr * dk / self.gamma**(2*(k + 1))
+        if lrk == np.inf:
+            pass
+        return lrk
 
 
 class DEQA(Algorithm):

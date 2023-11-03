@@ -80,8 +80,11 @@ class SoftmaxPolicy(Policy):
 
 
     def update(self, grad, lr: float):
+        grad = grad - grad.mean(axis=1)[..., np.newaxis]
         new = self.params + lr * grad
-        new_centered = new - np.max(new, axis=1).reshape(-1, 1)
+        new_centered = new - np.mean(new, axis=1).reshape(-1, 1)
+        if np.any(np.isnan(new_centered)):
+            pass
         self.params = new_centered
 
     
@@ -98,4 +101,7 @@ class SoftmaxPolicy(Policy):
     def probas(self):
         exps = np.exp(self.params)
         probas = exps / np.sum(exps, axis=1).reshape(-1, 1)
+        nans = 1. * np.isnan(probas)
+        fill = nans / np.maximum(nans.sum(axis=1)[..., np.newaxis], np.ones_like(nans))
+        probas = np.where(np.isnan(probas), fill, probas)
         return probas

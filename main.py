@@ -11,10 +11,10 @@ if __name__ == '__main__':
     horizon = 100
     env_class = GridworldEnv
     alg = DEQA
-    gamma = 0.99
+    gamma = 0.9
     epochs = 25
-    lr = lambda k: 1. / gamma**(2 * (k + 1) * d)
-    exact = True
+    lr = 1.
+    exact = False
 
     n_actions = 4
     d = 8
@@ -38,14 +38,11 @@ if __name__ == '__main__':
         mu = random_simplex((size, ))
         env = DiscreteStochastic(P, R, mu)
 
-        # algorithm = DEQA(env, gamma=gamma, horizon=horizon, d=d)
-        # perf = algorithm.learn(epochs=epochs, lr=lr, exact=True)
+        #algorithm = EQA(env, gamma=gamma)
+        #perf = algorithm.learn(epochs=epochs, lr=lr, exact=exact)
 
-        algorithm = EQA(env, gamma=gamma)
-        perf = algorithm.learn(epochs=epochs, lr=lr, exact=False)
-
-        algorithm = EQA(env, gamma=gamma, horizon=10, n_trajectories=100)
-        perf = algorithm.learn(epochs=epochs, lr=lr, exact=False)
+        algorithm = EQA(env, gamma=gamma, horizon=100, n_trajectories=10)
+        perf = algorithm.learn(epochs=epochs, lr=lr, exact=exact)
 
         if sum(perf[-10:]) < best:
             best = sum(perf[-10:])
