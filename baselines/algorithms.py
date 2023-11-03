@@ -11,13 +11,12 @@ from typing import Callable
 
 
 class Algorithm(object):
-    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100):
+    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100, name: str = None):
         self.env = env
         self.gamma = gamma
         self.horizon = horizon
 
-        self.pi: Policy = None
-        self.name = None
+        self.name = name
         self.k = 0
         self.samples = 0
         self.config = {
@@ -25,12 +24,15 @@ class Algorithm(object):
                 'environment': self.env.name,
                 'horizon': self.horizon
             }
+        
+        self.pi: Policy = None
+
 
 
     def learn(self, epochs: int = 1000, lr: Callable | float = 0.1, exact=False):
         totals = []
         config = {
-                'learning_rate': 'adaptive' if callable(lr) else lr,
+                'learning_rate': 'custom' if callable(lr) else lr,
                 'epochs': epochs,
                 'exact': exact
             }
@@ -135,9 +137,8 @@ class Algorithm(object):
 class REINFORCE(Algorithm):
     # Projected Policy Gradient Ascent using REINFORCE
     def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100):
-        super().__init__(env, gamma, horizon)
+        super().__init__(env, gamma, horizon, 'REINFORCE-PPG')
         self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
-        self.name = 'REINFORCE-PPG'
 
 
     def grad(self):
@@ -159,9 +160,8 @@ class REINFORCE(Algorithm):
 class PQA(Algorithm):
     # Projected Q-Ascent using MC rollouts to estimate Q
     def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100):
-        super().__init__(env, gamma, horizon)
+        super().__init__(env, gamma, horizon, 'PQA')
         self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
-        self.name = 'PQA'
 
 
     def grad(self):
@@ -194,8 +194,7 @@ class EQA(Algorithm):
             n_trajectories = min(int(np.ceil(1 / gamma**(2 * horizon))), 10)
         self.n_trajectories = n_trajectories
 
-        self.name = 'EQA'
-        super().__init__(env, gamma, horizon)
+        super().__init__(env, gamma, horizon, 'EQA')
 
         self.config['n_trajectories'] = n_trajectories
         self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
@@ -237,10 +236,11 @@ class EQA(Algorithm):
 class DEQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
     def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100, d: int = 3):
-        super().__init__(env, gamma, horizon)
+        
         self.d = d
+        name = f'{d}-EQA'
+        super().__init__(env, gamma, horizon, name)
         self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
-        self.name = f'{d}-EQA'
 
 
     def grad(self):

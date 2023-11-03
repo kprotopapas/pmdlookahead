@@ -7,11 +7,11 @@ from helper import random_simplex
 
 if __name__ == '__main__':
     n_agents = 1
-    size = 8
+    size = 64
     horizon = 100
     env_class = GridworldEnv
     alg = DEQA
-    gamma = 0.9
+    gamma = 1. - 1. / horizon
     epochs = 25
     lr = 1.
     exact = False
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         #algorithm = EQA(env, gamma=gamma)
         #perf = algorithm.learn(epochs=epochs, lr=lr, exact=exact)
 
-        algorithm = EQA(env, gamma=gamma, horizon=100, n_trajectories=10)
+        algorithm = EQA(env, gamma=gamma, horizon=50, n_trajectories=200)
         perf = algorithm.learn(epochs=epochs, lr=lr, exact=exact)
 
         if sum(perf[-10:]) < best:
