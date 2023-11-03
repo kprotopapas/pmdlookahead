@@ -21,7 +21,7 @@ class DiscreteStochastic(gym.Env):
         self.observation_space = spaces.Discrete(self.n_obs)
         self.action_space = spaces.Discrete(self.n_act)
 
-        self.name = 'DiscreteStochastic'
+        self.name = f'DiscreteStochastic-{self.n_obs}-{self.n_act}'
 
         self.reset()
     

@@ -12,7 +12,7 @@ if __name__ == '__main__':
     env_class = GridworldEnv
     alg = DEQA
     gamma = 0.99
-    epochs = 500
+    epochs = 25
     lr = lambda k: 1. / gamma**(2 * (k + 1) * d)
     exact = True
 
@@ -40,6 +40,9 @@ if __name__ == '__main__':
 
         # algorithm = DEQA(env, gamma=gamma, horizon=horizon, d=d)
         # perf = algorithm.learn(epochs=epochs, lr=lr, exact=True)
+
+        algorithm = EQA(env, gamma=gamma)
+        perf = algorithm.learn(epochs=epochs, lr=lr, exact=False)
 
         algorithm = EQA(env, gamma=gamma, horizon=10, n_trajectories=100)
         perf = algorithm.learn(epochs=epochs, lr=lr, exact=False)

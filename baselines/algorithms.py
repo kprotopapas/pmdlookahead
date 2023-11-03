@@ -19,21 +19,28 @@ class Algorithm(object):
         self.name = None
         self.k = 0
         self.samples = 0
+        self.config = {
+                'algorithm': self.name,
+                'environment': self.env.name,
+                'horizon': self.horizon
+            }
 
 
     def learn(self, epochs: int = 1000, lr: Callable | float = 0.1, exact=False):
         totals = []
+        config = {
+                'learning_rate': 'adaptive' if callable(lr) else lr,
+                'epochs': epochs,
+                'exact': exact
+            }
+        for key, value in self.config.items():
+            config[key] = value
+
         wandb.init(
             # set the wandb project where this run will be logged
             project="pmd-ts",
             # track hyperparameters and run metadata
-            config={
-                'learning_rate': 'adaptive' if callable(lr) else lr,
-                'algorithm': self.name,
-                'environment': self.env.name,
-                'epochs': epochs,
-                'exact': exact
-            }
+            config=self.config
         )
 
         V_opt = self.env.optimal(self.gamma).max(axis=1)
@@ -53,7 +60,8 @@ class Algorithm(object):
 
             wandb.log({'epoch': k,
                        'suboptimality': sub,
-                       'gradient_std': np.std(gradient, axis=1).min(),
+                       'grad_std': np.std(gradient, axis=1).min(),
+                       'grad_norm': np.sum(gradient * gradient),
                        'samples': self.samples,
                        'grad_error': np.max(np.abs(gradient - grad_exact)) / np.abs(grad_exact).max()})
 
@@ -169,12 +177,17 @@ class EQA(Algorithm):
     def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = None, n_trajectories: int = None):
         if horizon is None:
             horizon = min(int(np.ceil(1 / (1 - gamma))), 100)
-        super().__init__(env, gamma, horizon)
-        self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
-        self.name = 'EQA'
+
         if n_trajectories is None:
             n_trajectories = min(int(np.ceil(1 / gamma**(2 * horizon))), 10)
         self.n_trajectories = n_trajectories
+
+        self.name = 'EQA'
+        super().__init__(env, gamma, horizon)
+
+        self.config['n_trajectories'] = n_trajectories
+        self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
+
 
 
     def grad(self):
