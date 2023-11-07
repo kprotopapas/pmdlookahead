@@ -55,7 +55,8 @@ class Algorithm(object):
             grad_est = exact or self.grad()
 
             gradient = grad_exact if exact else grad_est
-            lrk = lr(k, gradient) if callable(lr) else self.lrk(lr, k, gradient)
+
+            lrk = self.lrk(lr, k, gradient)
             if lrk == np.inf:
                 pass
             if lrk > 100:
@@ -281,7 +282,7 @@ class DEQA(Algorithm):
 
         dk = np.max(entropy(greedy, pk, axis=1))
 
-        lrk = lr * dk / self.gamma**(2*(k + 1) * self.d)
+        lrk = dk * lr(k) if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d)
         return lrk
 
 

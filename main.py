@@ -13,11 +13,11 @@ if __name__ == '__main__':
     env_class = GridworldEnv
     alg = DEQA
     gamma = 1. - 1. / horizon
-    epochs = 25
-    lr = 1.
+    epochs = 500
+    lr = 0.1
     exact = False
 
-    n_actions = 4
+    n_actions = 8
     d = 8
 
     parser = argparse.ArgumentParser(prog='PMD TS runner', description='Runner for PMD TS', epilog='')
@@ -31,11 +31,38 @@ if __name__ == '__main__':
     parser.add_argument('--exact', action='store_true')
 
 
-    P = np.load('P.npy', allow_pickle=True)
-    R = np.load('R.npy', allow_pickle=True)
-    mu = np.load('mu.npy', allow_pickle=True)
+    P = random_simplex((size, size, n_actions))
+    R = random_simplex((size, n_actions))
+    mu = random_simplex((size,))
     env = DiscreteStochastic(P, R, mu)
 
     deqa = DEQA(env, gamma=gamma, d=1)
-    info = deqa.learn(epochs=500, use_wandb=True, exact=True)
-    print()
+    info = deqa.learn(epochs=500, use_wandb=False, exact=True, lr=lr)
+    subs_base = [i['suboptimality'] for i in info]
+
+    all_subs = []
+    for d in range(5, 25, 5):
+        deqa = DEQA(env, gamma=gamma, d=d)
+        info = deqa.learn(epochs=epochs, use_wandb=False, exact=True, lr=lr)
+        subs = [i['suboptimality'] for i in info]
+        all_subs.append(subs)
+
+    k = np.arange(epochs)
+
+    plt.yscale('log')
+    plt.plot(k, subs_base, 'r-')
+    
+    colors = ['b', 'c', 'y', 'm', 'g']
+
+    for c, s in zip(colors, all_subs):
+        plt.plot(k, s, f'{c}-')
+
+    plt.plot(k, gamma**(2 * np.arange(epochs)) * subs_base[0], f'r--')
+
+    for c, l in zip(colors, range(5, 25, 5)):
+        plt.plot(k, gamma**(2 * l * np.arange(epochs)) * subs_base[0], f'{c}--')
+
+    plt.ylim(1e-14, 1e2)
+
+    plt.grid(True)
+    plt.show()
