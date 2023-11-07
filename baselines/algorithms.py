@@ -2,7 +2,7 @@ import gymnasium as gym
 from environments.discrete import DiscreteStochastic
 from helper import np
 from baselines.policies import DirectPolicy, Policy, SoftmaxPolicy
-from scipy.special import rel_entr
+from scipy.stats import entropy
 
 import numpy as np
 import wandb
@@ -28,23 +28,24 @@ class Algorithm(object):
         self.pi: Policy = None
 
 
+    def learn(self, epochs: int = 1000, lr: Callable | float = 0.1, exact=False, use_wandb=True):
+        info = []
+        if use_wandb:
+            config = {
+                    'learning_rate': 'custom' if callable(lr) else lr,
+                    'epochs': epochs,
+                    'exact': exact
+                }
+            for key, value in self.config.items():
+                config[key] = value
 
-    def learn(self, epochs: int = 1000, lr: Callable | float = 0.1, exact=False):
-        totals = []
-        config = {
-                'learning_rate': 'custom' if callable(lr) else lr,
-                'epochs': epochs,
-                'exact': exact
-            }
-        for key, value in self.config.items():
-            config[key] = value
-
-        wandb.init(
-            # set the wandb project where this run will be logged
-            project="pmd-ts",
-            # track hyperparameters and run metadata
-            config=self.config
-        )
+        
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project="pmd-ts",
+                # track hyperparameters and run metadata
+                config=self.config
+            )
 
         V_opt = self.env.optimal(self.gamma).max(axis=1)
 
@@ -57,27 +58,39 @@ class Algorithm(object):
             lrk = lr(k, gradient) if callable(lr) else self.lrk(lr, k, gradient)
             if lrk == np.inf:
                 pass
+            if lrk > 100:
+                pass
             self.pi.update(gradient, lrk)
 
             V = np.sum(self.pi.probas * Q, axis=1)
             sub = np.max(np.abs(V_opt - V))
-            totals.append(sub)
 
             # A = Q - Q.mean(axis=1)[..., np.newaxis]
             A_est = gradient - gradient.mean(axis=1)[..., np.newaxis]
             err = gradient - grad_exact
             err = err - err.mean(axis=1)[..., np.newaxis] # for simplex or exp update mean doesn't matter
 
+            out_log = {'epoch': k,
+                           'suboptimality': sub,
+                           'gradient_effect': np.max(np.abs(A_est)),
+                           'learning_rate': lrk,
+                           'pi_entropy': np.mean(entropy(self.pi.probas, axis=1))
+                           }
+            
+            if not exact:
+                out_log['normalized_grad_error'] = np.max(np.abs(err))
+                out_log['samples'] = self.samples
 
-            wandb.log({'epoch': k,
-                       'suboptimality': sub,
-                       'estimated_adv_norm': np.max(np.abs(A_est)),
-                       'samples': self.samples,
-                       'grad_error': np.max(np.abs(err)),
-                       'learning_rate': lrk})
+            info.append(out_log)
 
-        wandb.finish()
-        return totals
+            if use_wandb:
+                wandb.log(out_log)
+                
+
+        if use_wandb:
+            wandb.finish()
+
+        return info
 
 
     def reward_to_go(self, rewards: [float]):
@@ -153,7 +166,7 @@ class REINFORCE(Algorithm):
         return gradient
 
 
-    def grad_exact(self, Q):
+    def grad_exact(self, Q): # need to calculate d^\pi somehow...
         pass # TODO
 
 
@@ -182,7 +195,7 @@ class PQA(Algorithm):
     
     def lrk(self, lr, k, gradient):
         return lr / self.gamma**(2*k + 1)
-
+    
 
 class EQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
@@ -236,36 +249,76 @@ class EQA(Algorithm):
 class DEQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
     def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100, d: int = 3):
-        
         self.d = d
-        name = f'{d}-EQA'
+        name = 'EQA' if d == 1 else f'{d}-EQA'
         super().__init__(env, gamma, horizon, name)
         self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
 
 
     def grad(self):
-        states, actions, rewards = self.sample_trajectory()
-        rtg = self.reward_to_go(rewards)
-        gradient = np.zeros_like(self.pi.probas)
-
-        for t, z in enumerate(zip(states[:-1], actions, rtg)):
-            s, a, r = z
-            gradient[s, a] += self.gamma**t * r
-
-        return gradient
+        raise NotImplementedError
 
 
     def grad_exact(self, Q):
+        if self.d == 1:
+            return Q
+        
         V = np.sum(self.pi.probas * Q, axis=1)
         tdm = V
 
         for _ in range(self.d - 1):
             tdm = self.env.bellman(tdm, self.gamma)
 
-        next_Vd = np.sum(self.env.P * tdm[..., np.newaxis, np.newaxis], axis=0)
-        Qd = self.env.R + self.gamma * next_Vd
+        next_Vd = self.env.P.transpose((2, 1, 0)) @ tdm
+        Qd = self.env.R + self.gamma * next_Vd.transpose((1, 0))
         return Qd
 
 
-    def lrk(self, lr, k):
-        return lr / self.gamma**(2 * (k + 1) * self.d)
+    def lrk(self, lr, k, gradient):
+        greedy = 1 * (gradient == gradient.max(axis=1)[..., np.newaxis])
+        greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
+        pk = self.pi.probas
+
+        dk = np.max(entropy(greedy, pk, axis=1))
+
+        lrk = lr * dk / self.gamma**(2*(k + 1) * self.d)
+        return lrk
+
+
+class DPQA(Algorithm):
+    # Projected Q-Ascent using MC rollouts to estimate Q, with d-step lookahead for Q
+    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100, d: int = 3):
+        self.d = d
+        name = 'PQA' if d == 1 else f'{d}-PQA'
+        super().__init__(env, gamma, horizon, name)
+        self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
+
+
+    def grad(self):
+        raise NotImplementedError
+    
+
+    def grad_exact(self, Q):
+        if self.d == 1:
+            return Q
+        
+        V = np.sum(self.pi.probas * Q, axis=1)
+        tdm = V
+
+        for _ in range(self.d - 1):
+            tdm = self.env.bellman(tdm, self.gamma)
+
+        next_Vd = self.env.P.transpose((2, 1, 0)) @ tdm
+        Qd = self.env.R + self.gamma * next_Vd.transpose((2, 1))
+        return Qd
+    
+    
+    def lrk(self, lr, k, gradient):
+        greedy = 1 * (gradient == gradient.max(axis=1)[..., np.newaxis])
+        greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
+        pk = self.pi.probas
+
+        dk = np.linalg.norm(pk - greedy, axis=1).max()
+
+        lrk = lr * dk / self.gamma**(2*(k + 1) * self.d)
+        return lrk

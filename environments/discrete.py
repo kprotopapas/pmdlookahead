@@ -94,6 +94,16 @@ class DiscreteStochastic(gym.Env):
         return Q
 
 
+class Trap(DiscreteStochastic):
+    # Defines a Trap environment, where an agent needs to sacrifice immediate reward for large future reward
+    # Reward structure looks like: [large, -1, ..., -1, -1, 0, +1, +1, ..., +1, -large]
+    def __init__(self, length: int):
+        size = 2 * length + 1
+        P = np.zeros((size, size, 2))
+        P[:, :, 0] = np.identity(size)[:]
+        super().__init__()
+
+
 class GridworldEnv(DiscreteStochastic):
     # Defines a size * size grid with a random target state (absorbing)
     # Reward of -1 for all states except for target
