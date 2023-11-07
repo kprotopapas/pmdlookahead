@@ -238,7 +238,7 @@ class EQA(Algorithm):
         greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
         pk = self.pi.probas
 
-        dk = np.max(rel_entr(greedy, pk).sum(axis=1))
+        dk = np.max(entropy(greedy, pk, axis=1))
 
         lrk = lr * dk / self.gamma**(2*(k + 1))
         if lrk == np.inf:

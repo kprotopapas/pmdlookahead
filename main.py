@@ -30,16 +30,11 @@ if __name__ == '__main__':
     parser.add_argument('-l', type=float, default=0.05)
     parser.add_argument('--exact', action='store_true')
 
-    
-
-    P = random_simplex((size, size, n_actions))
-    R = np.random.random((size, n_actions))
-    mu = random_simplex((size, ))
-    env = DiscreteStochastic(P, R, mu)
 
     P = np.load('P.npy', allow_pickle=True)
     R = np.load('R.npy', allow_pickle=True)
     mu = np.load('mu.npy', allow_pickle=True)
+    env = DiscreteStochastic(P, R, mu)
 
     deqa = DEQA(env, gamma=gamma, d=1)
     info = deqa.learn(epochs=500, use_wandb=True, exact=True)
