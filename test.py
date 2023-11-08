@@ -19,13 +19,13 @@ if __name__ == '__main__':
     R = random_simplex((size, n_actions))
     mu = random_simplex((size,))
     env = DiscreteStochastic(P, R, mu, gamma)
-    env = Trap(5, 1, gamma)
+    env = Trap(15, 1, gamma)
 
-    anything = 15
+    anything = 25
 
-    deqa = DEQA(env, d=1)
-    lr = lambda k: 1 / gamma**(25 * (k + 1)) # TODO PLAY WITH
-    lr = 100000
+    deqa = DEQA(env)
+    lr = lambda k: 1 / gamma**(2 * (k + 1) * anything) # TODO PLAY WITH
+    #lr = 1
     info = deqa.learn(epochs=epochs, use_wandb=False, exact=True, lr=lr)
     subs_base = [i['suboptimality'] for i in info]
 

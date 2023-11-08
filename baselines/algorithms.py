@@ -30,6 +30,7 @@ class Algorithm(object):
 
 
     def learn(self, epochs: int = 1000, lr: Callable | float = 1, exact=False, use_wandb=True, verbose=False):
+        self.exact = exact
         info = []
         if use_wandb:
             config = {
@@ -170,7 +171,7 @@ class Algorithm(object):
 
 class PolicyIteration(Algorithm):
     def __init__(self, env: DiscreteStochastic, horizon: int, n_trajectories: int):
-        pi = DirectPolicy(self.env.observation_space, self.env.action_space)
+        pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, n_trajectories, pi, 'PI')
 
 
@@ -188,7 +189,7 @@ class PolicyIteration(Algorithm):
 class REINFORCE(Algorithm):
     # Projected Policy Gradient Ascent using REINFORCE
     def __init__(self, env: DiscreteStochastic, horizon: int, n_trajectories: int):
-        pi = DirectPolicy(self.env.observation_space, self.env.action_space)
+        pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, pi, 'REINFORCE-PPG')
         
 
@@ -207,7 +208,7 @@ class REINFORCE(Algorithm):
 class PQA(Algorithm):
     # Projected Q-Ascent using MC rollouts to estimate Q
     def __init__(self, env: DiscreteStochastic, horizon: int, n_trajectories: int):
-        pi = DirectPolicy(self.env.observation_space, self.env.action_space)
+        pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, n_trajectories, pi, 'PQA')
 
 
@@ -229,7 +230,7 @@ class PQA(Algorithm):
 class EQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
     def __init__(self, env: DiscreteStochastic, horizon: int, n_trajectories: int):
-        pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
+        pi = SoftmaxPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, n_trajectories, pi, 'EQA')
 
 
@@ -252,7 +253,7 @@ class EQA(Algorithm):
 
 class DEQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
-    def __init__(self, env: DiscreteStochastic, horizon: int, M_l: int, M_t: int, M_f: int, d: int):
+    def __init__(self, env: DiscreteStochastic, horizon: int=None, M_l: int=None, d: int=1, M_t: int = None, M_f: int = None):
         if horizon == None:
             horizon = 1 / (1 - env.gamma)
         
@@ -261,28 +262,33 @@ class DEQA(Algorithm):
         self.M_f = M_f
         self.d = d
         name = 'EQA' if d == 1 else f'{d}-EQA'
-        pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
+        pi = SoftmaxPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, M_l, pi, name)
 
 
     def grad(self, Q):
+        return Q
+        
+
+    def estimate_value(self):
         if self.d == 1:
-            return Q
-        else:
-            # TODO
-            V_l = np.zeros((self.env.observation_space.n, ))
-            for s in self.env.observation_space:
-                for t in range(self.M_l):
-                    states, actions, rewards = self.sample_trajectory(s)
-                    rtg = self.reward_to_go(rewards)
-                    V_l[s] += rtg[0]
-                
-                V_l[s] /= self.M_l
+            return super().estimate_value()
+        
+        V_l = np.zeros((self.env.observation_space.n, ))
+        for s in self.env.observation_space:
+            for t in range(self.M_l):
+                states, actions, rewards = self.sample_trajectory(s)
+                rtg = self.reward_to_go(rewards)
+                V_l[s] += rtg[0]
+            
+            V_l[s] /= self.M_l
 
-            for t in range(self.d - 1):
-                V_l = self.approx_bellman(V_l)
-
-
+        for t in range(self.d - 1):
+            V_l = self.approx_bellman(V_l)
+        
+        Q_d = V_l #TODO change
+        
+        return Q_d
 
 
     def grad_exact(self, Q):
@@ -320,14 +326,13 @@ class DEQA(Algorithm):
                 pass
                 
 
-
 class DPQA(Algorithm):
     # Projected Q-Ascent using MC rollouts to estimate Q, with d-step lookahead for Q
     def __init__(self, env: DiscreteStochastic, horizon: int = 100, d: int = 3):
         self.d = d
         name = 'PQA' if d == 1 else f'{d}-PQA'
         super().__init__(env, horizon, name)
-        self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
+        self.pi = DirectPolicy(env.observation_space, env.action_space)
 
 
     def grad(self):
