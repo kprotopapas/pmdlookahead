@@ -80,10 +80,6 @@ class SoftmaxPolicy(Policy):
 
 
     def update(self, grad, lr: float):
-        if lr == np.inf:
-            self.params = np.where(grad == grad.max(axis=1)[..., np.newaxis], np.inf, -np.inf)
-            return
-
         grad = grad - grad.mean(axis=1)[..., np.newaxis] # center gradient before update
         new = self.params + lr * grad
         new_centered = new - new.max(axis=1)[..., np.newaxis] # renormalize by max
@@ -104,8 +100,8 @@ class SoftmaxPolicy(Policy):
     @property
     def probas(self):
         exps = np.exp(self.params)
-        infs = 1. * np.isinf(exps)
-        infs /= np.sum(infs, axis=1)
-
-        probas = np.where(np.sum(infs, axis=1)[..., np.newaxis] > 0, exps / np.sum(exps, axis=1), infs)
+        probas = exps / np.sum(exps, axis=1).reshape(-1, 1)
+        nans = 1. * np.isnan(probas)
+        fill = nans / np.maximum(nans.sum(axis=1)[..., np.newaxis], np.ones_like(nans))
+        probas = np.where(np.isnan(probas), fill, probas)
         return probas
