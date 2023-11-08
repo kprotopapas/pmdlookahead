@@ -8,10 +8,10 @@ from helper import random_simplex
 if __name__ == '__main__':
     n_agents = 1
     size = 8
-    horizon = 10
+    horizon = 100
     alg = DEQA
     gamma = 1. - 1. / horizon
-    epochs = 50
+    epochs = 500
 
     n_actions = 8
 
@@ -19,7 +19,6 @@ if __name__ == '__main__':
     R = random_simplex((size, n_actions))
     mu = random_simplex((size,))
     env = DiscreteStochastic(P, R, mu, gamma)
-    env = Trap(size, 1, gamma)
 
     anything = 100
 
