@@ -11,9 +11,9 @@ from typing import Callable
 
 
 class Algorithm(object):
-    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100, name: str = None):
+    def __init__(self, env: DiscreteStochastic, horizon: int = 100, name: str = None):
         self.env = env
-        self.gamma = gamma
+        self.gamma = env.gamma
         self.horizon = horizon
 
         self.name = name
@@ -28,7 +28,7 @@ class Algorithm(object):
         self.pi: Policy = None
 
 
-    def learn(self, epochs: int = 1000, lr: Callable | float = 0.1, exact=False, use_wandb=True):
+    def learn(self, epochs: int = 1000, lr: Callable | float = 0.1, exact=False, use_wandb=True, verbose=False):
         info = []
         if use_wandb:
             config = {
@@ -47,10 +47,10 @@ class Algorithm(object):
                 config=self.config
             )
 
-        V_opt = self.env.optimal(self.gamma).max(axis=1)
+        V_opt = self.env.optimal().max(axis=1)
 
         for k in range(epochs):
-            Q = self.env.value(self.pi.probas, self.gamma)
+            Q = self.env.value(self.pi.probas)
             grad_exact = self.grad_exact(Q)
             grad_est = exact or self.grad()
 
@@ -83,6 +83,9 @@ class Algorithm(object):
                 out_log['samples'] = self.samples
 
             info.append(out_log)
+            
+            if verbose:
+                print(f'Epoch: {k}, suboptimality: {sub}')
 
             if use_wandb:
                 wandb.log(out_log)
@@ -148,10 +151,37 @@ class Algorithm(object):
         return lr
 
 
+class PolicyIteration(Algorithm):
+    def __init__(self, env: DiscreteStochastic, horizon: int = 100, noise=0.01):
+        super().__init__(env, horizon, 'PI')
+        self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
+        self.noise = noise
+    
+    def grad(self):
+        Q = self.env.value(self.pi.probas)
+        Q += np.random.random(Q.shape) * self.noise - self.noise / 2
+
+        greedy = 1 * (Q == Q.max(axis=1)[..., np.newaxis])
+        greedy = greedy / np.sum(greedy, axis=1)[..., np.newaxis]
+
+        return greedy - self.pi.probas
+    
+
+    def grad_exact(self, Q):
+        greedy = 1 * (Q == Q.max(axis=1)[..., np.newaxis])
+        greedy = greedy / np.sum(greedy, axis=1)[..., np.newaxis]
+
+        return greedy - self.pi.probas
+    
+
+    def lrk(self, lr, k, gradient):
+        return 1
+
+        
 class REINFORCE(Algorithm):
     # Projected Policy Gradient Ascent using REINFORCE
-    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100):
-        super().__init__(env, gamma, horizon, 'REINFORCE-PPG')
+    def __init__(self, env: DiscreteStochastic, horizon: int = 100):
+        super().__init__(env, horizon, 'REINFORCE-PPG')
         self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
 
 
@@ -173,8 +203,8 @@ class REINFORCE(Algorithm):
 
 class PQA(Algorithm):
     # Projected Q-Ascent using MC rollouts to estimate Q
-    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100):
-        super().__init__(env, gamma, horizon, 'PQA')
+    def __init__(self, env: DiscreteStochastic, horizon: int = 100):
+        super().__init__(env, horizon, 'PQA')
         self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
 
 
@@ -200,7 +230,8 @@ class PQA(Algorithm):
 
 class EQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
-    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = None, n_trajectories: int = None):
+    def __init__(self, env: DiscreteStochastic, horizon: int = None, n_trajectories: int = None):
+        gamma = env.gamma
         if horizon is None:
             horizon = min(int(np.ceil(1 / (1 - gamma))), 100)
 
@@ -208,7 +239,7 @@ class EQA(Algorithm):
             n_trajectories = min(int(np.ceil(1 / gamma**(2 * horizon))), 10)
         self.n_trajectories = n_trajectories
 
-        super().__init__(env, gamma, horizon, 'EQA')
+        super().__init__(env, horizon, 'EQA')
 
         self.config['n_trajectories'] = n_trajectories
         self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
@@ -240,19 +271,19 @@ class EQA(Algorithm):
         pk = self.pi.probas
 
         dk = np.max(entropy(greedy, pk, axis=1))
-
-        lrk = lr * dk / self.gamma**(2*(k + 1))
-        if lrk == np.inf:
+        if np.isnan(dk):
             pass
+
+        lrk = dk * lr(k) if callable(lr) else lr * dk / self.gamma**(2*(k + 1))
         return lrk
 
 
 class DEQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
-    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100, d: int = 3):
+    def __init__(self, env: DiscreteStochastic, horizon: int = 100, d: int = 3):
         self.d = d
         name = 'EQA' if d == 1 else f'{d}-EQA'
-        super().__init__(env, gamma, horizon, name)
+        super().__init__(env, horizon, name)
         self.pi = SoftmaxPolicy(self.env.observation_space, self.env.action_space)
 
 
@@ -268,7 +299,7 @@ class DEQA(Algorithm):
         tdm = V
 
         for _ in range(self.d - 1):
-            tdm = self.env.bellman(tdm, self.gamma)
+            tdm = self.env.bellman(tdm)
 
         next_Vd = self.env.P.transpose((2, 1, 0)) @ tdm
         Qd = self.env.R + self.gamma * next_Vd.transpose((1, 0))
@@ -288,10 +319,10 @@ class DEQA(Algorithm):
 
 class DPQA(Algorithm):
     # Projected Q-Ascent using MC rollouts to estimate Q, with d-step lookahead for Q
-    def __init__(self, env: DiscreteStochastic, gamma: float = 0.9, horizon: int = 100, d: int = 3):
+    def __init__(self, env: DiscreteStochastic, horizon: int = 100, d: int = 3):
         self.d = d
         name = 'PQA' if d == 1 else f'{d}-PQA'
-        super().__init__(env, gamma, horizon, name)
+        super().__init__(env, horizon, name)
         self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
 
 
@@ -307,7 +338,7 @@ class DPQA(Algorithm):
         tdm = V
 
         for _ in range(self.d - 1):
-            tdm = self.env.bellman(tdm, self.gamma)
+            tdm = self.env.bellman(tdm)
 
         next_Vd = self.env.P.transpose((2, 1, 0)) @ tdm
         Qd = self.env.R + self.gamma * next_Vd.transpose((2, 1))

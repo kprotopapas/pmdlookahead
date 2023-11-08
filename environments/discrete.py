@@ -4,7 +4,7 @@ import numpy as np
 
 
 class DiscreteStochastic(gym.Env):
-    def __init__(self, P, R, mu):
+    def __init__(self, P, R, mu, gamma):
         self.n_obs = P.shape[0]
         self.n_act = P.shape[2]
 
@@ -17,6 +17,7 @@ class DiscreteStochastic(gym.Env):
         self.P = P
         self.mu = mu
         self.R = R
+        self.gamma = gamma
 
         self.observation_space = spaces.Discrete(self.n_obs)
         self.action_space = spaces.Discrete(self.n_act)
@@ -42,7 +43,8 @@ class DiscreteStochastic(gym.Env):
     
 
     # Returns the value function of a policy pi (discount factor gamma)
-    def value(self, probas, gamma):
+    def value(self, probas):
+        gamma = self.gamma
         P_pi = np.sum(probas * self.P, axis=2)
         M = np.identity(self.n_obs) - gamma * P_pi.T
         r_pi = np.sum(probas * self.R, axis=1)
@@ -56,7 +58,8 @@ class DiscreteStochastic(gym.Env):
     
 
     # Bellman maximisation operator (VI operator)
-    def bellman(self, V, gamma):
+    def bellman(self, V):
+        gamma = self.gamma
         next_V = np.sum(self.P * V[..., np.newaxis, np.newaxis], axis=0)
         Q = self.R + gamma * next_V
         TV = np.max(Q, axis=1)
@@ -64,30 +67,32 @@ class DiscreteStochastic(gym.Env):
     
 
     # Finds the optimal value function via policy iteration
-    def optimal(self, gamma):
+    def optimal(self):
+        gamma = self.gamma
         Q = np.zeros_like(self.R)
 
         pi = 1 * (Q == Q.max(axis=1)[..., np.newaxis])
         pi = pi / pi.sum(axis=1)[..., np.newaxis]
-        Q_new = self.value(pi, gamma)
+        Q_new = self.value(pi)
 
         while not np.allclose(Q, Q_new):
             Q = Q_new
             pi = 1 * (Q == Q.max(axis=1)[..., np.newaxis])
             pi = pi / pi.sum(axis=1)[..., np.newaxis]
-            Q_new = self.value(pi, gamma)
+            Q_new = self.value(pi)
 
         return Q_new
     
 
     # Finds the optimal value function via value iteration
-    def optimal_vi(self, gamma):
+    def optimal_vi(self):
+        gamma = self.gamma
         V = np.ones((self.n_obs, )) / (1 - gamma)
-        V_new = self.bellman(V, gamma)
+        V_new = self.bellman(V)
 
         while not np.allclose(V, V_new):
             V = V_new
-            V_new = self.bellman(V, gamma)
+            V_new = self.bellman(V)
         
         next_V = np.sum(self.P * V_new[..., np.newaxis, np.newaxis], axis=0)
         Q = self.R + gamma * next_V
@@ -97,17 +102,43 @@ class DiscreteStochastic(gym.Env):
 class Trap(DiscreteStochastic):
     # Defines a Trap environment, where an agent needs to sacrifice immediate reward for large future reward
     # Reward structure looks like: [large, -1, ..., -1, -1, 0, +1, +1, ..., +1, -large]
-    def __init__(self, length: int):
+    def __init__(self, length: int, factor: float, gamma: float):
         size = 2 * length + 1
         P = np.zeros((size, size, 2))
-        P[:, :, 0] = np.identity(size)[:]
-        super().__init__()
+        P[:, 1:, 0] = np.identity(size)[:, :-1]
+        P[0, 0, 0] = 1
+        P[:, :-1, 1] = np.identity(size)[:, 1:]
+        P[-1, -1, 1] = 1
+
+        factor *= 1 / gamma**length
+
+        self.values = np.zeros((size,))
+        self.values[0] = factor * length
+        self.values[-1] = 1 # TODO play with 
+        self.values[1:length] = -1
+        self.values[length + 1:-1] = 1
+
+        R = np.zeros((size, 2))
+        R[1:, 0] = self.values[:-1]
+        R[0, 0] = self.values[0]
+        R[:-1, 1] = self.values[1:]
+        R[-1, 1] = self.values[-1]
+
+        mu = 1 * (np.arange(size) == length)
+        
+        super().__init__(P, R, mu, gamma)
+
+
+    def __str__(self):
+        str_values = self.values.astype(str)
+        str_values[self.state] = 'X'
+        return str(str_values)
 
 
 class GridworldEnv(DiscreteStochastic):
     # Defines a size * size grid with a random target state (absorbing)
     # Reward of -1 for all states except for target
-    def __init__(self, size: int = 4):
+    def __init__(self, size: int, gamma: float):
         self.size = size
 
         n_obs = size**2
@@ -131,7 +162,7 @@ class GridworldEnv(DiscreteStochastic):
 
         self.name = f'Gridworld-v2-{self.size}'
 
-        super().__init__(P, R, mu)
+        super().__init__(P, R, mu, gamma)
 
 
     def transition(self, state, action):

@@ -18,16 +18,19 @@ if __name__ == '__main__':
     P = random_simplex((size, size, n_actions))
     R = random_simplex((size, n_actions))
     mu = random_simplex((size,))
-    env = DiscreteStochastic(P, R, mu)
+    env = DiscreteStochastic(P, R, mu, gamma)
 
-    deqa = DEQA(env, gamma=gamma, d=1)
-    info = deqa.learn(epochs=epochs, use_wandb=False, exact=True)
+    anything = 100
+
+    deqa = DEQA(env, d=1)
+    lr = lambda k: 0.1 / gamma**(anything * k) # TODO SHOWCASE
+    info = deqa.learn(epochs=epochs, use_wandb=False, exact=True, lr=lr)
     subs_base = [i['suboptimality'] for i in info]
 
     all_subs = []
     for d in range(5, 25, 5):
-        deqa = DEQA(env, gamma=gamma, d=d)
-        info = deqa.learn(epochs=epochs, use_wandb=False, exact=True)
+        deqa = DEQA(env, d=d)
+        info = deqa.learn(epochs=epochs, use_wandb=False, exact=True, lr=lr)
         subs = [i['suboptimality'] for i in info]
         all_subs.append(subs)
 
