@@ -8,12 +8,13 @@ from helper import random_simplex
 
 if __name__ == '__main__':
     n_agents = 1
-    size = 10
+    size = 21
     horizon = 10
     gamma = 1. - 1. / horizon
-    epochs = 100
+    epochs = 20
     lr = 0.1
     exact = False
+    use_wandb = False
 
     n_actions = 4
     d = 8
@@ -29,15 +30,15 @@ if __name__ == '__main__':
     parser.add_argument('--exact', action='store_true')
 
 
-    env = Trap(size, 1, gamma)
+    env = Trap(size // 2, 1, gamma)
 
     noise = 0.2
 
     pi = PolicyIteration(env, horizon, noise)
-    info = pi.learn(epochs, exact=True, use_wandb=False)
+    info = pi.learn(epochs, exact=exact, use_wandb=use_wandb)
 
-    pmd = DEQA(env, d=1)
-    info_pmd = pmd.learn(epochs, exact=True, use_wandb=False)
+    pmd = DEQA(env, d=1, M_l=10, horizon=2 * horizon)
+    info_pmd = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True)
 
     subs_base = [i['suboptimality'] for i in info]
     subs_pmd = [i['suboptimality'] for i in info_pmd]

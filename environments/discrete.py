@@ -114,7 +114,7 @@ class Trap(DiscreteStochastic):
 
         self.values = np.zeros((size,))
         self.values[0] = factor * length
-        self.values[-1] = 1 # TODO play with 
+        self.values[-1] = - factor * length # TODO play with 
         self.values[1:length] = -1
         self.values[length + 1:-1] = 1
 
@@ -123,6 +123,8 @@ class Trap(DiscreteStochastic):
         R[0, 0] = self.values[0]
         R[:-1, 1] = self.values[1:]
         R[-1, 1] = self.values[-1]
+
+        R = R / np.max(np.abs(R))
 
         mu = 1 * (np.arange(size) == length)
         

@@ -7,11 +7,11 @@ from helper import random_simplex
 
 if __name__ == '__main__':
     n_agents = 1
-    size = 8
-    horizon = 100
+    size = 16
+    horizon = 20
     alg = DEQA
     gamma = 1. - 1. / horizon
-    epochs = 500
+    epochs = 25
 
     n_actions = 8
 
@@ -19,12 +19,13 @@ if __name__ == '__main__':
     R = random_simplex((size, n_actions))
     mu = random_simplex((size,))
     env = DiscreteStochastic(P, R, mu, gamma)
+    env = Trap(5, 1, gamma)
 
-    anything = 100
+    anything = 15
 
     deqa = DEQA(env, d=1)
-    lr = lambda k: 0.1 / gamma**(anything * k) # TODO SHOWCASE
-    lr = 1
+    lr = lambda k: 1 / gamma**(25 * (k + 1)) # TODO PLAY WITH
+    lr = 100000
     info = deqa.learn(epochs=epochs, use_wandb=False, exact=True, lr=lr)
     subs_base = [i['suboptimality'] for i in info]
 
@@ -50,7 +51,7 @@ if __name__ == '__main__':
     for c, l in zip(colors, range(5, 25, 5)):
         plt.plot(k, gamma**(2 * l * np.arange(epochs)) * subs_base[0], f'{c}--')
 
-    plt.ylim(1e-14, 1e2)
+    plt.ylim(1e-14, 1e4)
 
     plt.grid(True)
     plt.show()

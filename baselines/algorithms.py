@@ -28,7 +28,7 @@ class Algorithm(object):
         self.pi: Policy = None
 
 
-    def learn(self, epochs: int = 1000, lr: Callable | float = 0.1, exact=False, use_wandb=True, verbose=False):
+    def learn(self, epochs: int = 1000, lr: Callable | float = 1, exact=False, use_wandb=True, verbose=False):
         info = []
         if use_wandb:
             config = {
@@ -110,7 +110,7 @@ class Algorithm(object):
         action_list = []
 
         old_state, info = self.env.reset()
-        if state == None:
+        if state is not None:
             self.env.state = state
         else:
             state = old_state
@@ -126,7 +126,8 @@ class Algorithm(object):
             action_list.append(action)
             state_list.append(state)
             start = 1
-            
+
+
         for t in range(start, self.horizon):
             terminal = 'terminal' in info and info['terminal']
             if terminal:
@@ -152,14 +153,13 @@ class Algorithm(object):
 
 
 class PolicyIteration(Algorithm):
-    def __init__(self, env: DiscreteStochastic, horizon: int = 100, noise=0.01):
+    def __init__(self, env: DiscreteStochastic, horizon: int = 100):
         super().__init__(env, horizon, 'PI')
         self.pi = DirectPolicy(self.env.observation_space, self.env.action_space)
-        self.noise = noise
-    
+
+
     def grad(self):
-        Q = self.env.value(self.pi.probas)
-        Q += np.random.random(Q.shape) * self.noise - self.noise / 2
+        
 
         greedy = 1 * (Q == Q.max(axis=1)[..., np.newaxis])
         greedy = greedy / np.sum(greedy, axis=1)[..., np.newaxis]
@@ -280,7 +280,13 @@ class EQA(Algorithm):
 
 class DEQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
-    def __init__(self, env: DiscreteStochastic, horizon: int = 100, d: int = 3):
+    def __init__(self, env: DiscreteStochastic, horizon: int = None, M_l: int = 10, M_t: int = 10, M_f: int = 10, d: int = 3):
+        if horizon == None:
+            horizon = 1 / (1 - env.gamma)
+        
+        self.M_l = M_l
+        self.M_t = M_t
+        self.M_f = M_f
         self.d = d
         name = 'EQA' if d == 1 else f'{d}-EQA'
         super().__init__(env, horizon, name)
@@ -288,7 +294,33 @@ class DEQA(Algorithm):
 
 
     def grad(self):
-        raise NotImplementedError
+        if self.d == 1:
+            Q = np.zeros_like(self.env.R)
+
+            for s in range(self.env.n_obs):
+                for a in range(self.env.n_act):
+                    for _ in range(self.M_l):
+                        states, actions, rewards = self.sample_trajectory(s, a)
+                        rtg = self.reward_to_go(rewards)
+                        Q[s, a] += rtg[0]
+
+            Q = Q / self.M_l
+            self.samples += self.horizon * self.M_l * self.env.n_obs * self.env.n_act
+            return Q
+        
+        V_l = np.zeros((self.env.observation_space.n, ))
+        for s in self.env.observation_space:
+            for t in range(self.M_l):
+                states, actions, rewards = self.sample_trajectory(s)
+                rtg = self.reward_to_go(rewards)
+                V_l[s] += rtg[0]
+            
+            V_l[s] /= self.M_l
+
+        for t in range(self.d - 1):
+            V_l = self.approx_bellman(V_l)
+
+
 
 
     def grad_exact(self, Q):
@@ -313,10 +345,18 @@ class DEQA(Algorithm):
 
         dk = np.max(entropy(greedy, pk, axis=1))
 
-        lrk = dk * lr(k) if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d)
+        lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d)
         if np.isinf(lrk) or np.isnan(lrk):
-            pass
+            lrk = np.inf
         return lrk
+
+
+    def approx_bellman(self, V):
+        Q = np.zeros((self.env.observation_space.n, self.env.action_space.n))
+        for s in self.env.observation_space:
+            for t in range(self.M_l):
+                pass
+                
 
 
 class DPQA(Algorithm):
