@@ -314,6 +314,8 @@ class DEQA(Algorithm):
         dk = np.max(entropy(greedy, pk, axis=1))
 
         lrk = dk * lr(k) if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d)
+        if np.isinf(lrk) or np.isnan(lrk):
+            pass
         return lrk
 
 

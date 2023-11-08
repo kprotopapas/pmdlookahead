@@ -1,17 +1,17 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from environments.discrete import DiscreteStochastic
+from environments.discrete import DiscreteStochastic, Trap
 from baselines.algorithms import DEQA
 from helper import random_simplex
 
 if __name__ == '__main__':
     n_agents = 1
-    size = 32
-    horizon = 100
+    size = 8
+    horizon = 10
     alg = DEQA
     gamma = 1. - 1. / horizon
-    epochs = 500
+    epochs = 50
 
     n_actions = 8
 
@@ -19,11 +19,13 @@ if __name__ == '__main__':
     R = random_simplex((size, n_actions))
     mu = random_simplex((size,))
     env = DiscreteStochastic(P, R, mu, gamma)
+    env = Trap(size, 1, gamma)
 
     anything = 100
 
     deqa = DEQA(env, d=1)
     lr = lambda k: 0.1 / gamma**(anything * k) # TODO SHOWCASE
+    lr = 1
     info = deqa.learn(epochs=epochs, use_wandb=False, exact=True, lr=lr)
     subs_base = [i['suboptimality'] for i in info]
 
