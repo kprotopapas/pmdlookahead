@@ -37,7 +37,7 @@ if __name__ == '__main__':
     pi = PolicyIteration(env, horizon, noise)
     info = pi.learn(epochs, exact=exact, use_wandb=use_wandb)
 
-    pmd = DEQA(env, d=1, M_l=10, horizon=2 * horizon)
+    pmd = EQA(env, 2 * horizon, 10)
     info_pmd = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True)
 
     subs_base = [i['suboptimality'] for i in info]
