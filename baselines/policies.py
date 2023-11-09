@@ -80,11 +80,13 @@ class SoftmaxPolicy(Policy):
 
 
     def update(self, grad, lr: float):
+        if lr == np.inf:
+            self.params = np.where(grad == grad.max(axis=1)[..., np.newaxis], np.inf, -np.inf)
+            return
+
         grad = grad - grad.mean(axis=1)[..., np.newaxis] # center gradient before update
         new = self.params + lr * grad
         new_centered = new - new.max(axis=1)[..., np.newaxis] # renormalize by max
-        if np.any(np.isnan(new_centered)) or np.any(np.isinf(new_centered)):
-            pass
         self.params = new_centered
 
     

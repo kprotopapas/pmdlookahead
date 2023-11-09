@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     deqa = DEQA(env)
     lr = lambda k: 1 / gamma**(2 * (k + 1) * anything) # TODO PLAY WITH
-    #lr = 1
+    lr = np.inf
     info = deqa.learn(epochs=epochs, use_wandb=False, exact=True, lr=lr)
     subs_base = [i['suboptimality'] for i in info]
 
