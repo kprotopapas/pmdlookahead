@@ -42,6 +42,12 @@ class DirectPolicy(Policy):
 
 
     def update(self, grad, lr: float):
+        if np.isinf(lr):
+            probas = 1. * (grad == grad.max(axis=1)[..., np.newaxis])
+            probas /= probas.sum(axis=1)[..., np.newaxis]
+            self.probabilities = probas
+            return
+        
         new = self.probabilities + lr * grad
         for i in range(self.probabilities.shape[0]):
             projected = simplex_project_sort(new[i])
@@ -80,7 +86,7 @@ class SoftmaxPolicy(Policy):
 
 
     def update(self, grad, lr: float):
-        if lr == np.inf:
+        if np.isinf(lr):
             self.params = np.where(grad == grad.max(axis=1)[..., np.newaxis], np.inf, -np.inf)
             return
 

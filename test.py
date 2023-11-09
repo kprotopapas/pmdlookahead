@@ -11,7 +11,7 @@ if __name__ == '__main__':
     horizon = 20
     alg = DEQA
     gamma = 1. - 1. / horizon
-    epochs = 25
+    epochs = 100
 
     n_actions = 8
 
@@ -19,13 +19,13 @@ if __name__ == '__main__':
     R = random_simplex((size, n_actions))
     mu = random_simplex((size,))
     env = DiscreteStochastic(P, R, mu, gamma)
-    env = Trap(15, 1, gamma)
+    #env = Trap(15, 1, gamma)
 
-    anything = 25
+    anything = 20
 
     deqa = DEQA(env)
     lr = lambda k: 1 / gamma**(2 * (k + 1) * anything) # TODO PLAY WITH
-    lr = np.inf
+    lr = 1
     info = deqa.learn(epochs=epochs, use_wandb=False, exact=True, lr=lr)
     subs_base = [i['suboptimality'] for i in info]
 
@@ -51,7 +51,8 @@ if __name__ == '__main__':
     for c, l in zip(colors, range(5, 25, 5)):
         plt.plot(k, gamma**(2 * l * np.arange(epochs)) * subs_base[0], f'{c}--')
 
-    plt.ylim(1e-14, 1e4)
+    plt.ylim(top=1e4)
 
     plt.grid(True)
     plt.show()
+    print()

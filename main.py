@@ -34,11 +34,14 @@ if __name__ == '__main__':
 
     noise = 0.2
 
-    pi = PolicyIteration(env, horizon, noise)
-    info = pi.learn(epochs, exact=exact, use_wandb=use_wandb)
+    H = 2 * horizon
+    M_l = horizon
 
-    pmd = EQA(env, 2 * horizon, 10)
-    info_pmd = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True)
+    pi = PolicyIteration(env, H, n_trajectories=M_l)
+    info = pi.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True)
+
+    pmd = DPQA(env, horizon=H, M_l=M_l, d=1)
+    info_pmd = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=np.inf)
 
     subs_base = [i['suboptimality'] for i in info]
     subs_pmd = [i['suboptimality'] for i in info_pmd]

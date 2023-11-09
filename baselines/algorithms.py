@@ -53,7 +53,7 @@ class Algorithm(object):
 
         for k in range(epochs):
             Q = self.env.value(self.pi.probas)
-            grad_exact = self.grad(Q)
+            grad_exact = self.grad_exact(Q)
 
             if exact:
                 gradient = grad_exact
@@ -62,10 +62,6 @@ class Algorithm(object):
                 gradient = self.grad(Q_est)
 
             lrk = self.lrk(lr, k, gradient)
-            if lrk == np.inf:
-                pass
-            if lrk > 100:
-                pass
             self.pi.update(gradient, lrk)
 
             V = np.sum(self.pi.probas * Q, axis=1)
@@ -163,6 +159,9 @@ class Algorithm(object):
     
 
     def grad(self, Q):
+        return self.grad_exact(Q)
+
+    def grad_exact(self, Q):
         raise NotImplementedError
 
     def lrk(self, lr, k, grad):
@@ -175,15 +174,12 @@ class PolicyIteration(Algorithm):
         super().__init__(env, horizon, n_trajectories, pi, 'PI')
 
 
-    def grad(self, Q):
-        greedy = 1 * (Q == Q.max(axis=1)[..., np.newaxis])
-        greedy = greedy / np.sum(greedy, axis=1)[..., np.newaxis]
-
-        return greedy - self.pi.probas
+    def grad_exact(self, Q):
+        return Q
 
 
     def lrk(self, lr, k, gradient):
-        return 1
+        return np.inf
 
         
 class REINFORCE(Algorithm):
@@ -191,18 +187,6 @@ class REINFORCE(Algorithm):
     def __init__(self, env: DiscreteStochastic, horizon: int, n_trajectories: int):
         pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, pi, 'REINFORCE-PPG')
-        
-
-    def grad(self, Q):
-        states, actions, rewards = self.sample_trajectory()
-        rtg = self.reward_to_go(rewards)
-        gradient = np.zeros_like(self.pi.probas)
-
-        for t, z in enumerate(zip(states[:-1], actions, rtg)):
-            s, a, r = z
-            gradient[s, a] += self.gamma**t * r / self.pi.probas[s, a]
-
-        return gradient # TODO CHANGE!!
 
 
 class PQA(Algorithm):
@@ -211,8 +195,8 @@ class PQA(Algorithm):
         pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, n_trajectories, pi, 'PQA')
 
-
-    def grad(self, Q):
+    
+    def grad_exact(self, Q):
         return Q
     
     
@@ -233,8 +217,8 @@ class EQA(Algorithm):
         pi = SoftmaxPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, n_trajectories, pi, 'EQA')
 
-
-    def grad(self, Q):
+    
+    def grad_exact(self, Q):
         return Q
 
 
@@ -251,44 +235,55 @@ class EQA(Algorithm):
         return lrk
 
 
-class DEQA(Algorithm):
+class DPMD(Algorithm):
     # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
-    def __init__(self, env: DiscreteStochastic, horizon: int=None, M_l: int=None, d: int=1, M_t: int = None, M_f: int = None):
-        if horizon == None:
-            horizon = 1 / (1 - env.gamma)
+    def __init__(self, pi: Policy, name: str, env: DiscreteStochastic, horizon: int=None,
+                 M_l: int=None, d: int=1, M_t: int = None, M_f: int = None):
+        
+        M_t = M_t or M_l
+        M_f = M_f or M_l
         
         self.M_l = M_l
         self.M_t = M_t
         self.M_f = M_f
         self.d = d
-        name = 'EQA' if d == 1 else f'{d}-EQA'
-        pi = SoftmaxPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, M_l, pi, name)
 
-
+    
     def grad(self, Q):
-        return Q
-        
-
-    def estimate_value(self):
         if self.d == 1:
-            return super().estimate_value()
+            return Q
         
-        V_l = np.zeros((self.env.observation_space.n, ))
+        tdm = Q
+        for _ in range(self.d - 1):
+            tdm = self.approx_bellman(tdm)
+        
+        Q_d = np.zeros_like(self.env.R)
         for s in self.env.observation_space:
-            for t in range(self.M_l):
-                states, actions, rewards = self.sample_trajectory(s)
-                rtg = self.reward_to_go(rewards)
-                V_l[s] += rtg[0]
-            
-            V_l[s] /= self.M_l
-
-        for t in range(self.d - 1):
-            V_l = self.approx_bellman(V_l)
+            for a in self.env.action_space:
+                for _ in range(self.M_f):
+                    self.env.state = s
+                    sp, r, _ = self.env.step(a)
+                    Q_d += r + self.gamma * tdm[sp]
+                
+                self.samples += self.M_f
         
-        Q_d = V_l #TODO change
-        
+        Q_d /= self.M_f
         return Q_d
+
+
+    def grad_exact(self, Q):
+        if self.d == 1:
+            return Q
+        V = np.sum(self.pi.probas * Q, axis=1)
+        tdm = V
+
+        for _ in range(self.d - 1):
+            tdm = self.env.bellman(V)
+        
+        next_V = np.sum(self.env.P * tdm[..., np.newaxis, np.newaxis], axis=0) # P.transpose((2, 1, 0)) @ V
+        Q = self.env.R + self.gamma * next_V
+        return Q
 
 
     def grad_exact(self, Q):
@@ -311,55 +306,63 @@ class DEQA(Algorithm):
         greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
         pk = self.pi.probas
 
-        dk = np.max(entropy(greedy, pk, axis=1))
+        dk = self.divergence(greedy, pk)
 
         lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d)
         if np.isinf(lrk) or np.isnan(lrk):
             lrk = np.inf
         return lrk
+    
+
+    def divergence(self, u, v):
+        raise NotImplementedError
+    
+
+    def estimate_value(self):
+        if self.d == 1:
+            return super().estimate_value()
+        
+        V_l = np.zeros((self.env.observation_space.n, ))
+        for s in self.env.observation_space:
+            for t in range(self.M_l):
+                states, actions, rewards = self.sample_trajectory(s)
+                rtg = self.reward_to_go(rewards)
+                V_l[s] += rtg[0]
+            
+            V_l[s] /= self.M_l
+        
+        return V_l
 
 
     def approx_bellman(self, V):
         Q = np.zeros((self.env.observation_space.n, self.env.action_space.n))
         for s in self.env.observation_space:
-            for t in range(self.M_l):
-                pass
-                
+            for a in self.env.action_space:
+                for t in range(self.M_t):
+                    self.env.state = s
+                    sp, r, _ = self.env.step(a)
+                    Q[s, a] = r + self.gamma * V[sp]
 
-class DPQA(Algorithm):
-    # Projected Q-Ascent using MC rollouts to estimate Q, with d-step lookahead for Q
-    def __init__(self, env: DiscreteStochastic, horizon: int = 100, d: int = 3):
-        self.d = d
+                self.samples += self.M_t
+
+
+class DEQA(DPMD):
+    def __init__(self, env: DiscreteStochastic, horizon: int, M_l: int, d: int = 1, M_t: int = None, M_f: int = None):
+        pi = SoftmaxPolicy(env.observation_space, env.action_space)
+        name = 'EQA' if d == 1 else f'{d}-EQA'
+        super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
+
+
+    def divergence(self, u, v): # KL-divergence
+        return np.max(entropy(u, v, axis=1))
+
+
+class DPQA(DPMD):
+    def __init__(self, env: DiscreteStochastic, horizon: int, M_l: int, d: int = 1, M_t: int = None, M_f: int = None):
+        pi = DirectPolicy(env.observation_space, env.action_space)
         name = 'PQA' if d == 1 else f'{d}-PQA'
-        super().__init__(env, horizon, name)
-        self.pi = DirectPolicy(env.observation_space, env.action_space)
+        super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
 
-    def grad(self):
-        raise NotImplementedError
-    
-
-    def grad_exact(self, Q):
-        if self.d == 1:
-            return Q
-        
-        V = np.sum(self.pi.probas * Q, axis=1)
-        tdm = V
-
-        for _ in range(self.d - 1):
-            tdm = self.env.bellman(tdm)
-
-        next_Vd = self.env.P.transpose((2, 1, 0)) @ tdm
-        Qd = self.env.R + self.gamma * next_Vd.transpose((2, 1))
-        return Qd
-    
-    
-    def lrk(self, lr, k, gradient):
-        greedy = 1 * (gradient == gradient.max(axis=1)[..., np.newaxis])
-        greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
-        pk = self.pi.probas
-
-        dk = np.linalg.norm(pk - greedy, axis=1).max()
-
-        lrk = lr * dk / self.gamma**(2*(k + 1) * self.d)
-        return lrk
+    def divergence(self, u, v): # Total variation divergence
+        return np.max(np.linalg.norm(u - v, axis=1)**2)
