@@ -17,7 +17,7 @@ def simplex_project_sort(v, z=1):
 
 def random_simplex(shape):
     new_shape = (shape[0] + 1,) + shape[1:]
-    temp = np.random.random(size=new_shape).astype(np.float128)
+    temp = np.random.random(size=new_shape).astype(np.float64)
     temp[0, ...] = 0
     temp[1, ...] = 1
     sorted = np.sort(temp, axis=0)

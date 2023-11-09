@@ -1,6 +1,7 @@
 import numpy as np
 import argparse
 from matplotlib import pyplot as plt
+import time
 
 from environments.discrete import *
 from baselines.algorithms import *
@@ -12,7 +13,7 @@ if __name__ == '__main__':
     size = 16
     horizon = 10
     gamma = 1. - 1. / horizon
-    epochs = 50
+    epochs = 10
     lr = 0.1
     exact = False
     use_wandb = False
@@ -42,16 +43,22 @@ if __name__ == '__main__':
     M_l = 2 * horizon
 
     pi = PolicyIteration(env, H, n_trajectories=M_l)
+    start = time.time()
     info_pi = pi.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True)
+    time_pi = time.time() - start
 
     pmd = DPQA(env, horizon=H, M_l=M_l, d=1)
     lr = lambda k: 1
+    start = time.time()
     info_pmd = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr)
+    time_pmd = time.time() - start
 
     subs_pi = [i['suboptimality'] for i in info_pi]
     subs_pmd = [i['suboptimality'] for i in info_pmd]
 
     k = np.arange(epochs)
+
+    print(f'Policy Iteration time: {time_pi}, PMD time: {time_pmd}')
 
     plt.yscale('log')
     plt.plot(k, subs_pi, 'r-')
