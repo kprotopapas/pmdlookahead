@@ -3,7 +3,7 @@ from gymnasium import spaces
 import numpy as np
 
 
-class DiscreteStochastic(gym.Env):
+class Tabular(gym.Env):
     def __init__(self, P, R, mu, gamma):
         self.n_obs = P.shape[0]
         self.n_act = P.shape[2]
@@ -99,7 +99,7 @@ class DiscreteStochastic(gym.Env):
         return Q
 
 
-class Trap(DiscreteStochastic):
+class Trap(Tabular):
     # Defines a Trap environment, where an agent needs to sacrifice immediate reward for large future reward
     # Reward structure looks like: [large, -1, ..., -1, -1, 0, +1, +1, ..., +1, -large]
     def __init__(self, length: int, factor: float, gamma: float):
@@ -137,7 +137,7 @@ class Trap(DiscreteStochastic):
         return str(str_values)
 
 
-class GridworldEnv(DiscreteStochastic):
+class GridworldEnv(Tabular):
     # Defines a size * size grid with a random target state (absorbing)
     # Reward of -1 for all states except for target
     def __init__(self, size: int, gamma: float):

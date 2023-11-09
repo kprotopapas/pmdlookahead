@@ -1,5 +1,5 @@
 import gymnasium as gym
-from environments.discrete import DiscreteStochastic
+from environments.discrete import Tabular
 from helper import np
 from baselines.policies import DirectPolicy, Policy, SoftmaxPolicy
 from scipy.stats import entropy
@@ -11,7 +11,7 @@ from typing import Callable
 
 
 class Algorithm(object):
-    def __init__(self, env: DiscreteStochastic, horizon: int, n_trajectories: int, pi: Policy, name: str):
+    def __init__(self, env: Tabular, horizon: int, n_trajectories: int, pi: Policy, name: str):
         self.env = env
         self.gamma = env.gamma
         self.horizon = horizon
@@ -169,7 +169,7 @@ class Algorithm(object):
 
 
 class PolicyIteration(Algorithm):
-    def __init__(self, env: DiscreteStochastic, horizon: int, n_trajectories: int):
+    def __init__(self, env: Tabular, horizon: int, n_trajectories: int):
         pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, n_trajectories, pi, 'PI')
 
@@ -184,14 +184,14 @@ class PolicyIteration(Algorithm):
         
 class REINFORCE(Algorithm):
     # Projected Policy Gradient Ascent using REINFORCE
-    def __init__(self, env: DiscreteStochastic, horizon: int, n_trajectories: int):
+    def __init__(self, env: Tabular, horizon: int, n_trajectories: int):
         pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, pi, 'REINFORCE-PPG')
 
 
 class PQA(Algorithm):
     # Projected Q-Ascent using MC rollouts to estimate Q
-    def __init__(self, env: DiscreteStochastic, horizon: int, n_trajectories: int):
+    def __init__(self, env: Tabular, horizon: int, n_trajectories: int):
         pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, n_trajectories, pi, 'PQA')
 
@@ -213,7 +213,7 @@ class PQA(Algorithm):
 
 class EQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
-    def __init__(self, env: DiscreteStochastic, horizon: int, n_trajectories: int):
+    def __init__(self, env: Tabular, horizon: int, n_trajectories: int):
         pi = SoftmaxPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, n_trajectories, pi, 'EQA')
 
@@ -237,7 +237,7 @@ class EQA(Algorithm):
 
 class DPMD(Algorithm):
     # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
-    def __init__(self, pi: Policy, name: str, env: DiscreteStochastic, horizon: int=None,
+    def __init__(self, pi: Policy, name: str, env: Tabular, horizon: int=None,
                  M_l: int=None, d: int=1, M_t: int = None, M_f: int = None):
         
         M_t = M_t or M_l
@@ -275,20 +275,6 @@ class DPMD(Algorithm):
     def grad_exact(self, Q):
         if self.d == 1:
             return Q
-        V = np.sum(self.pi.probas * Q, axis=1)
-        tdm = V
-
-        for _ in range(self.d - 1):
-            tdm = self.env.bellman(V)
-        
-        next_V = np.sum(self.env.P * tdm[..., np.newaxis, np.newaxis], axis=0) # P.transpose((2, 1, 0)) @ V
-        Q = self.env.R + self.gamma * next_V
-        return Q
-
-
-    def grad_exact(self, Q):
-        if self.d == 1:
-            return Q
         
         V = np.sum(self.pi.probas * Q, axis=1)
         tdm = V
@@ -307,6 +293,8 @@ class DPMD(Algorithm):
         pk = self.pi.probas
 
         dk = self.divergence(greedy, pk)
+        if dk == 0: # CONVERGED! V* = TV*
+            return 0
 
         lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d)
         if np.isinf(lrk) or np.isnan(lrk):
@@ -347,7 +335,7 @@ class DPMD(Algorithm):
 
 
 class DEQA(DPMD):
-    def __init__(self, env: DiscreteStochastic, horizon: int, M_l: int, d: int = 1, M_t: int = None, M_f: int = None):
+    def __init__(self, env: Tabular, horizon: int, M_l: int, d: int = 1, M_t: int = None, M_f: int = None):
         pi = SoftmaxPolicy(env.observation_space, env.action_space)
         name = 'EQA' if d == 1 else f'{d}-EQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
@@ -358,7 +346,7 @@ class DEQA(DPMD):
 
 
 class DPQA(DPMD):
-    def __init__(self, env: DiscreteStochastic, horizon: int, M_l: int, d: int = 1, M_t: int = None, M_f: int = None):
+    def __init__(self, env: Tabular, horizon: int, M_l: int, d: int = 1, M_t: int = None, M_f: int = None):
         pi = DirectPolicy(env.observation_space, env.action_space)
         name = 'PQA' if d == 1 else f'{d}-PQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)

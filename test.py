@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from environments.discrete import DiscreteStochastic, Trap
+from environments.discrete import Tabular, Trap
 from baselines.algorithms import DEQA
 from helper import random_simplex
 
@@ -18,7 +18,7 @@ if __name__ == '__main__':
     P = random_simplex((size, size, n_actions))
     R = random_simplex((size, n_actions))
     mu = random_simplex((size,))
-    env = DiscreteStochastic(P, R, mu, gamma)
+    env = Tabular(P, R, mu, gamma)
     #env = Trap(15, 1, gamma)
 
     anything = 20
