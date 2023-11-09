@@ -9,10 +9,10 @@ from helper import random_simplex
 
 if __name__ == '__main__':
     n_agents = 1
-    size = 32
+    size = 16
     horizon = 10
     gamma = 1. - 1. / horizon
-    epochs = 20
+    epochs = 50
     lr = 0.1
     exact = False
     use_wandb = False
@@ -35,25 +35,21 @@ if __name__ == '__main__':
     R = random_simplex((size, n_actions))
     mu = random_simplex((size, ))
 
-    env = Tabular(P, R, mu)
+    env = Tabular(P, R, mu, gamma)
     #env = Trap(size // 2, 1, gamma)
 
-    noise = 0.2
-
     H = 2 * horizon
-    M_l = horizon
+    M_l = 2 * horizon
 
     pi = PolicyIteration(env, H, n_trajectories=M_l)
     info_pi = pi.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True)
 
     pmd = DPQA(env, horizon=H, M_l=M_l, d=1)
-    info_pmd = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=np.inf)
+    lr = lambda k: 1
+    info_pmd = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr)
 
     subs_pi = [i['suboptimality'] for i in info_pi]
     subs_pmd = [i['suboptimality'] for i in info_pmd]
-
-    #inaccuracy = [i['normalized_grad_error'] for i in info]
-    #print(inaccuracy)
 
     k = np.arange(epochs)
 

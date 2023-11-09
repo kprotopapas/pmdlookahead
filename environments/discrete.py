@@ -137,7 +137,7 @@ class Trap(Tabular):
         return str(str_values)
 
 
-class GridworldEnv(Tabular):
+class Gridworld(Tabular):
     # Defines a size * size grid with a random target state (absorbing)
     # Reward of -1 for all states except for target
     def __init__(self, size: int, gamma: float):
