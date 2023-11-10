@@ -57,13 +57,14 @@ if __name__ == '__main__':
     start = time.time()
     info_pi = pi.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True)
     time_pi = time.time() - start
-
+    
     print('Running PQA')
     pmd = EQA(env, horizon=H, n_trajectories=M_l)
     start = time.time()
     info_pmd = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr)
     time_pmd = time.time() - start
 
+    lr = lambda k: 1 / gamma**(2 * (k + 1))
     print('Running 1-PQA')
     pmd = alg(env, horizon=H, M_l=M_l, M_t=M_t, M_f=M_f, d=1)
     start = time.time()

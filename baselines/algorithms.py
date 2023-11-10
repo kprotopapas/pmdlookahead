@@ -313,9 +313,11 @@ class DPMD(Algorithm):
 
     def approx_bellman(self, V):
         Q = np.zeros((self.env.observation_space.n, self.env.action_space.n))
+
         for s in range(self.env.n_obs):
             for a in range(self.env.n_act):
                 for t in range(self.M_t):
+                    
                     self.env.state = s
                     sp, r, _ = self.env.step(a)
                     Q[s, a] = r + self.gamma * V[sp]

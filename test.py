@@ -19,13 +19,13 @@ if __name__ == '__main__':
     R = random_simplex((size, n_actions))
     mu = random_simplex((size,))
     env = Tabular(P, R, mu, gamma)
-    #env = Trap(15, 1, gamma)
+    env = Trap(15, 1, gamma)
 
-    anything = 20
+    anything = 100000
 
     deqa = DEQA(env)
     lr = lambda k: 1 / gamma**(2 * (k + 1) * anything) # TODO PLAY WITH
-    lr = 1
+    #lr = np.inf
     info = deqa.learn(epochs=epochs, use_wandb=False, exact=True, lr=lr)
     subs_base = [i['suboptimality'] for i in info]
 
