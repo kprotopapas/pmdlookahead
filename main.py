@@ -52,7 +52,6 @@ if __name__ == '__main__':
     M_f = horizon
 
 
-    """
     print('Running approx PI')
     pi = PolicyIteration(env, H, n_trajectories=M_l)
     start = time.time()
@@ -71,9 +70,8 @@ if __name__ == '__main__':
     info_dpqa = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr)
     time_dpqa = time.time() - start
 
-    """
     infos = []
-    for d in range(5, 15, 5):
+    for d in range(5, 25, 5):
         print(f'Running {d}-PQA')
         deep_pmd = alg(env, horizon=H, M_l=M_l, d=d, M_t=M_t, M_f=M_f)
         start = time.time()
