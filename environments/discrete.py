@@ -2,9 +2,11 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 
+from baselines.policies import Policy
+
 
 class Tabular(gym.Env):
-    def __init__(self, P, R, mu, gamma):
+    def __init__(self, P, R, mu, gamma, name = None):
         self.n_obs = P.shape[0]
         self.n_act = P.shape[2]
 
@@ -22,13 +24,15 @@ class Tabular(gym.Env):
         self.observation_space = spaces.Discrete(self.n_obs)
         self.action_space = spaces.Discrete(self.n_act)
 
-        self.name = f'DiscreteStochastic-{self.n_obs}-{self.n_act}'
+        self.name = name or f'DiscreteStochastic-{self.n_obs}-{self.n_act}'
 
+        self.samples = 0
         self.reset()
     
 
-    def reset(self):
+    def reset(self, samples=False):
         self.state = np.random.choice(np.arange(self.n_obs), p=self.mu)
+        self.samples = 0 if samples else self.samples
         return self.state, {}
 
 
@@ -38,9 +42,19 @@ class Tabular(gym.Env):
         r = self.R[self.state, action]
         old_state = self.state
         self.state = next_state
+        self.samples += 1
 
         return self.state, r, {'r': r, 's': old_state, 'sp': self.state, 'a': action}
     
+
+    def V(self, pi: Policy):
+        Q = self.value(pi.probas)
+        return np.sum(Q * pi.probas, axis=1)
+
+    
+    def Q(self, pi: Policy):
+        return self.value(pi.probas)
+
 
     # Returns the value function of a policy pi (discount factor gamma)
     def value(self, probas):
@@ -128,7 +142,8 @@ class Trap(Tabular):
 
         mu = 1 * (np.arange(size) == length)
         
-        super().__init__(P, R, mu, gamma)
+        name = f'Trap-{length}'
+        super().__init__(P, R, mu, gamma, name=name)
 
 
     def __str__(self):
@@ -162,9 +177,9 @@ class Gridworld(Tabular):
         P[:, self.target, :] = 1 * (np.arange(n_obs) == self.target)[..., np.newaxis]
         R[self.target, :] = 0
 
-        self.name = f'Gridworld-v2-{self.size}'
+        name = f'Gridworld-v2-{self.size}'
 
-        super().__init__(P, R, mu, gamma)
+        super().__init__(P, R, mu, gamma, name=name)
 
 
     def transition(self, state, action):

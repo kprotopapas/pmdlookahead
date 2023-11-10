@@ -18,10 +18,9 @@ class Algorithm(object):
         self.n_trajectories = n_trajectories
 
         self.name = name
-        self.samples = 0
         self.config = {
                 'algorithm': self.name,
-                'environment': self.env.name,
+                'environment': {'name': self.env.name, 'gamma': self.env.gamma},
                 'horizon': self.horizon,
                 'n_trajectories': n_trajectories
             }
@@ -51,8 +50,10 @@ class Algorithm(object):
 
         V_opt = self.env.optimal().max(axis=1)
 
+        self.env.reset(samples=True)
+
         for k in range(epochs):
-            Q = self.env.value(self.pi.probas)
+            Q = self.env.Q(self.pi)
             grad_exact = self.grad_exact(Q)
 
             if exact:
@@ -74,14 +75,13 @@ class Algorithm(object):
 
             out_log = {'epoch': k,
                            'suboptimality': sub,
-                           'gradient_effect': np.max(np.abs(A_est)),
                            'learning_rate': lrk,
                            'pi_entropy': np.mean(entropy(self.pi.probas, axis=1))
                            }
             
             if not exact:
                 out_log['normalized_grad_error'] = np.max(np.abs(err))
-                out_log['samples'] = self.samples
+                out_log['samples'] = self.env.samples
 
             info.append(out_log)
             
@@ -110,7 +110,7 @@ class Algorithm(object):
         state_list = []
         action_list = []
 
-        old_state, info = self.env.reset()
+        old_state, info = self.env.reset(samples=False)
         if state is not None:
             self.env.state = state
         else:
@@ -138,8 +138,6 @@ class Algorithm(object):
             reward_list.append(reward)
             action_list.append(action)
             state_list.append(state)
-
-        self.samples += self.horizon
 
         return np.array(state_list), np.array(action_list), np.array(reward_list)
     
@@ -206,6 +204,8 @@ class PQA(Algorithm):
         pk = self.pi.probas
 
         dk = np.max(np.linalg.norm(greedy - pk, axis=1)**2 / 2)
+        if dk == 0: # CONVERGED! V* = TV*
+            return 0
 
         lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1))
         return lrk
@@ -228,8 +228,8 @@ class EQA(Algorithm):
         pk = self.pi.probas
 
         dk = np.max(entropy(greedy, pk, axis=1))
-        if np.isnan(dk):
-            pass
+        if dk == 0: # CONVERGED! V* = TV*
+            return 0
 
         lrk = dk * lr(k) if callable(lr) else lr * dk / self.gamma**(2*(k + 1))
         return lrk
@@ -250,32 +250,24 @@ class DPMD(Algorithm):
         super().__init__(env, horizon, M_l, pi, name)
 
     
-    def grad(self, Q):
-        if self.d == 1:
-            return Q
-        
-        tdm = Q
+    def grad(self, V):
+        tdm = V
         for _ in range(self.d - 1):
             tdm = self.approx_bellman(tdm)
         
         Q_d = np.zeros_like(self.env.R)
-        for s in self.env.observation_space:
-            for a in self.env.action_space:
+        for s in range(self.env.n_obs):
+            for a in range(self.env.n_act):
                 for _ in range(self.M_f):
                     self.env.state = s
                     sp, r, _ = self.env.step(a)
-                    Q_d += r + self.gamma * tdm[sp]
-                
-                self.samples += self.M_f
-        
+                    Q_d[s, a] += r + self.gamma * tdm[sp]
+                        
         Q_d /= self.M_f
         return Q_d
 
 
     def grad_exact(self, Q):
-        if self.d == 1:
-            return Q
-        
         V = np.sum(self.pi.probas * Q, axis=1)
         tdm = V
 
@@ -307,11 +299,8 @@ class DPMD(Algorithm):
     
 
     def estimate_value(self):
-        if self.d == 1:
-            return super().estimate_value()
-        
         V_l = np.zeros((self.env.observation_space.n, ))
-        for s in self.env.observation_space:
+        for s in range(self.env.n_obs):
             for t in range(self.M_l):
                 states, actions, rewards = self.sample_trajectory(s)
                 rtg = self.reward_to_go(rewards)
@@ -324,20 +313,20 @@ class DPMD(Algorithm):
 
     def approx_bellman(self, V):
         Q = np.zeros((self.env.observation_space.n, self.env.action_space.n))
-        for s in self.env.observation_space:
-            for a in self.env.action_space:
+        for s in range(self.env.n_obs):
+            for a in range(self.env.n_act):
                 for t in range(self.M_t):
                     self.env.state = s
                     sp, r, _ = self.env.step(a)
                     Q[s, a] = r + self.gamma * V[sp]
 
-                self.samples += self.M_t
+        return np.max(Q, axis=1)
 
 
 class DEQA(DPMD):
-    def __init__(self, env: Tabular, horizon: int, M_l: int, d: int = 1, M_t: int = None, M_f: int = None):
+    def __init__(self, env: Tabular, horizon: int = None, M_l: int = None, d: int = 1, M_t: int = None, M_f: int = None):
         pi = SoftmaxPolicy(env.observation_space, env.action_space)
-        name = 'EQA' if d == 1 else f'{d}-EQA'
+        name = f'{d}-EQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
 
@@ -348,9 +337,9 @@ class DEQA(DPMD):
 class DPQA(DPMD):
     def __init__(self, env: Tabular, horizon: int, M_l: int, d: int = 1, M_t: int = None, M_f: int = None):
         pi = DirectPolicy(env.observation_space, env.action_space)
-        name = 'PQA' if d == 1 else f'{d}-PQA'
+        name = f'{d}-PQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
 
     def divergence(self, u, v): # Total variation divergence
-        return np.max(np.linalg.norm(u - v, axis=1)**2)
+        return np.max(np.linalg.norm(u - v, axis=1)**2 / 2)
