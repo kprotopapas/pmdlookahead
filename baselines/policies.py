@@ -50,7 +50,7 @@ class DirectPolicy(Policy):
         
         new = self.probabilities + lr * grad
         for i in range(self.probabilities.shape[0]):
-            projected = simplex_project_sort(new[i] - new[i].min()) # easier projection, take away (1, 1, 1, ...)
+            projected = simplex_project_sort(new[i] - new[i].mean()) # easier projection, take away (1, 1, 1, ...)
             self.probabilities[i] = projected
 
     

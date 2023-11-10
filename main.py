@@ -10,7 +10,7 @@ from helper import random_simplex
 
 if __name__ == '__main__':
     n_agents = 1
-    size = 64
+    size = 32
     horizon = 25
     gamma = 1. - 1. / horizon
     epochs = 50
@@ -37,14 +37,22 @@ if __name__ == '__main__':
     R = random_simplex((size, n_actions))
     mu = random_simplex((size, ))
 
-    #env = Tabular(P, R, mu, gamma)
-    env = Gridworld(int(np.sqrt(size)), gamma)
+    P = np.load('runs/latest/P.npy', allow_pickle=True)
+    R = np.load('runs/latest/R.npy', allow_pickle=True)
+    mu = np.load('runs/latest/mu.npy', allow_pickle=True)
+
+    env = Tabular(P, R, mu, gamma)
+    #env = Gridworld(int(np.sqrt(size)), gamma)
+    #env = Trap(size, 1, gamma)
+
 
     H = 2 * horizon
     M_l = 2 * horizon
     M_t = horizon
     M_f = horizon
 
+
+    """
     print('Running approx PI')
     pi = PolicyIteration(env, H, n_trajectories=M_l)
     start = time.time()
@@ -58,13 +66,14 @@ if __name__ == '__main__':
     time_pmd = time.time() - start
 
     print('Running 1-PQA')
-    pmd = DPQA(env, horizon=H, M_l=M_l, M_t=M_t, M_f=M_f, d=1)
+    pmd = alg(env, horizon=H, M_l=M_l, M_t=M_t, M_f=M_f, d=1)
     start = time.time()
     info_dpqa = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr)
     time_dpqa = time.time() - start
 
+    """
     infos = []
-    for d in range(5, 25, 5):
+    for d in range(5, 15, 5):
         print(f'Running {d}-PQA')
         deep_pmd = alg(env, horizon=H, M_l=M_l, d=d, M_t=M_t, M_f=M_f)
         start = time.time()
@@ -72,6 +81,8 @@ if __name__ == '__main__':
         infos.append(info_dpmd)
         time_dpmd = time.time() - start
         print(f'{d}-PQA took time: {time_dpmd}')
+
+    
 
     subs_pi = [i['suboptimality'] for i in info_pi]
     subs_pmd = [i['suboptimality'] for i in info_pmd]
