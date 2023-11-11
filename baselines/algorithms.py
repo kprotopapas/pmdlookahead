@@ -62,7 +62,7 @@ class Algorithm(object):
                 Q_est = self.estimate_value()
                 gradient = self.grad(Q_est)
 
-            lrk = self.lrk(lr, k, gradient)
+            lrk, dk = self.lrk(lr, k, gradient)
             self.pi.update(gradient, lrk)
 
             V = np.sum(self.pi.probas * Q, axis=1)
@@ -78,6 +78,9 @@ class Algorithm(object):
                            'learning_rate': lrk,
                            'pi_entropy': np.mean(entropy(self.pi.probas, axis=1))
                            }
+            
+            if dk is not None:
+                out_log['divergence'] = dk
             
             if not exact:
                 out_log['normalized_grad_error'] = np.max(np.abs(err))
@@ -163,7 +166,7 @@ class Algorithm(object):
         raise NotImplementedError
 
     def lrk(self, lr, k, grad):
-        return lr
+        return lr, None
 
 
 class PolicyIteration(Algorithm):
@@ -177,7 +180,7 @@ class PolicyIteration(Algorithm):
 
 
     def lrk(self, lr, k, gradient):
-        return np.inf
+        return np.inf, None
 
         
 class REINFORCE(Algorithm):
@@ -208,7 +211,7 @@ class PQA(Algorithm):
             return 0
 
         lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1))
-        return lrk
+        return lrk, dk
     
 
 class EQA(Algorithm):
@@ -232,7 +235,7 @@ class EQA(Algorithm):
             return 0
 
         lrk = dk * lr(k) if callable(lr) else lr * dk / self.gamma**(2*(k + 1))
-        return lrk
+        return lrk, dk
 
 
 class DPMD(Algorithm):
@@ -291,7 +294,7 @@ class DPMD(Algorithm):
         lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d)
         if np.isinf(lrk) or np.isnan(lrk):
             lrk = np.inf
-        return lrk
+        return lrk, dk
     
 
     def divergence(self, u, v):

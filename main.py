@@ -13,11 +13,11 @@ if __name__ == '__main__':
     size = 32
     horizon = 25
     gamma = 1. - 1. / horizon
-    epochs = 50
+    epochs = 200
     lr = 0.1
     exact = False
     use_wandb = True
-    alg = DEQA
+    alg = DPQA
 
     n_actions = 4
     d = 8
@@ -52,19 +52,23 @@ if __name__ == '__main__':
     M_f = horizon
 
 
+    """
     print('Running approx PI')
     pi = PolicyIteration(env, H, n_trajectories=M_l)
     start = time.time()
     info_pi = pi.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True)
     time_pi = time.time() - start
     
+    
+
     print('Running PQA')
     pmd = EQA(env, horizon=H, n_trajectories=M_l)
     start = time.time()
     info_pmd = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr)
     time_pmd = time.time() - start
-
-    lr = lambda k: 1 / gamma**(2 * (k + 1))
+    """
+    
+    lr = lambda k: 0.1 / gamma**(2 * (k + 1) * 1)
     print('Running 1-PQA')
     pmd = alg(env, horizon=H, M_l=M_l, M_t=M_t, M_f=M_f, d=1)
     start = time.time()
