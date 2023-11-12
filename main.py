@@ -25,7 +25,7 @@ def run(d=1):
 
 def run_thread(d=1):
     daemon = Thread(target=run, kwargs={'d': d})
-    daemon.daemon = True
+    daemon.daemon = False
     daemon.start()
 
 
@@ -98,11 +98,12 @@ if __name__ == '__main__':
         if thread:
             run_thread(d=d)
         else:
-            
             infos.append(run(d=d))
 
-    for df in infos:
-        df.suboptimality.plot()
+    if not thread:
+        for df in infos:
+            df.suboptimality.plot()
 
-    plt.yscale('log')
-    plt.show()
+        plt.yscale('log')
+        plt.show()
+    
