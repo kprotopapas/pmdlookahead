@@ -4,3 +4,7 @@ wandb
 weights
 runs/*
 .vscode
+cluster-venv
+test.sh
+euler
+
