@@ -1,1 +1,1 @@
-python main.py --alg DPQA -n 5 --wandb --thread
+python main.py --alg DPQA -n 5 -s 32 -t 15 --epochs 500 --wandb --group logistic_v1

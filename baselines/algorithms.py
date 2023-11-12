@@ -44,7 +44,7 @@ class Algorithm(object):
                 # set the wandb project where this run will be logged
                 project="pmd-ts",
                 # track hyperparameters and run metadata
-                config=self.config,
+                config=config,
                 group=group
                 
             )
