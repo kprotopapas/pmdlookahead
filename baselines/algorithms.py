@@ -28,7 +28,7 @@ class Algorithm(object):
         self.pi: Policy = pi
 
 
-    def learn(self, epochs: int = 1000, lr: Callable | float = 1, exact=False, use_wandb=True, verbose=False):
+    def learn(self, epochs: int = 1000, lr: Callable | float = 1, exact=False, use_wandb=True, verbose=False, group = None):
         self.exact = exact
         info = []
         if use_wandb:
@@ -45,7 +45,9 @@ class Algorithm(object):
                 # set the wandb project where this run will be logged
                 project="pmd-ts",
                 # track hyperparameters and run metadata
-                config=self.config
+                config=self.config,
+                group=group
+                
             )
 
         V_opt = self.env.optimal().max(axis=1)
@@ -208,7 +210,7 @@ class PQA(Algorithm):
 
         dk = np.max(np.linalg.norm(greedy - pk, axis=1)**2 / 2)
         if dk == 0: # CONVERGED! V* = TV*
-            return 0
+            return 0, 0
 
         lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1))
         return lrk, dk
@@ -232,7 +234,7 @@ class EQA(Algorithm):
 
         dk = np.max(entropy(greedy, pk, axis=1))
         if dk == 0: # CONVERGED! V* = TV*
-            return 0
+            return 0, 0
 
         lrk = dk * lr(k) if callable(lr) else lr * dk / self.gamma**(2*(k + 1))
         return lrk, dk
@@ -289,7 +291,7 @@ class DPMD(Algorithm):
 
         dk = self.divergence(greedy, pk)
         if dk == 0: # CONVERGED! V* = TV*
-            return 0
+            return 0, 0
 
         lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d)
         if np.isinf(lrk) or np.isnan(lrk):
