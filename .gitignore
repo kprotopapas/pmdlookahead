@@ -6,3 +6,5 @@ runs/*
 .vscode
 cluster-venv
 test.sh
+euler
+
