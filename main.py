@@ -21,17 +21,22 @@ def run(d=1):
 
 
 def parse_alg(alg: str):
-    match alg.upper():
-        case 'REINFORCE':
-            return REINFORCE
-        case 'DPQA':
-            return DPQA
-        case 'DEQA':
-            return DEQA
-        case 'PQA':
-            return PQA
-        case 'EQA':
-            return EQA
+    up = alg.upper()
+
+    if up ==  'REINFORCE':
+        return REINFORCE
+    
+    if up == 'DPQA':
+        return DPQA
+    
+    if up == 'DEQA':
+        return DEQA
+    
+    if up == 'PQA':
+        return PQA
+    
+    if up == 'EQA':
+        return EQA
 
 
 if __name__ == '__main__':
