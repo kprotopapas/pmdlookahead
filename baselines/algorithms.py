@@ -83,7 +83,7 @@ class Algorithm(object):
                 out_log['divergence'] = dk
             
             if not exact:
-                out_log['normalized_grad_error'] = np.max(np.abs(err))
+                out_log['normalized_grad_error'] = np.max(np.abs(err)) / np.max(np.abs(grad_exact))
                 out_log['samples'] = self.env.samples
 
             info.append(out_log)
@@ -320,12 +320,16 @@ class DPMD(Algorithm):
         for s in range(self.env.n_obs):
             for a in range(self.env.n_act):
                 for t in range(self.M_t):
-                    
+
                     self.env.state = s
                     sp, r, _ = self.env.step(a)
                     Q[s, a] = r + self.gamma * V[sp]
 
         return np.max(Q, axis=1)
+    
+
+    def diagnostics(self):
+        pass
 
 
 class DEQA(DPMD):

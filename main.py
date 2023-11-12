@@ -41,9 +41,9 @@ if __name__ == '__main__':
     R = np.load('runs/latest/R.npy', allow_pickle=True)
     mu = np.load('runs/latest/mu.npy', allow_pickle=True)
 
-    env = Tabular(P, R, mu, gamma)
+    #env = Tabular(P, R, mu, gamma)
     #env = Gridworld(int(np.sqrt(size)), gamma)
-    #env = Trap(size, 1, gamma)
+    env = Trap(size, 1, gamma)
 
 
     H = 2 * horizon
@@ -87,16 +87,16 @@ if __name__ == '__main__':
 
     
 
-    subs_pi = [i['suboptimality'] for i in info_pi]
-    subs_pmd = [i['suboptimality'] for i in info_pmd]
+    #subs_pi = [i['suboptimality'] for i in info_pi]
+    #subs_pmd = [i['suboptimality'] for i in info_pmd]
     subs_dpqa = [i['suboptimality'] for i in info_dpqa]
 
     k = np.arange(epochs)
 
     plt.yscale('log')
-    plt.plot(k, subs_pi, 'r-', label='Approx PI')
-    plt.plot(k, subs_pmd, 'b-', label='PQA')
-    plt.plot(k, subs_dpqa, 'k-', label='1-PQA')
+    #plt.plot(k, subs_pi, 'r-', label='Approx PI')
+    #plt.plot(k, subs_pmd, 'b-', label='PQA')
+    #plt.plot(k, subs_dpqa, 'k-', label='1-PQA')
 
     colors = ['c', 'y', 'm', 'g']
 
