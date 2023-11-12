@@ -3,6 +3,7 @@ import argparse
 from matplotlib import pyplot as plt
 import time
 from threading import Thread
+import pandas as pd
 
 from environments.discrete import *
 from baselines.algorithms import *
@@ -11,11 +12,15 @@ from helper import random_simplex
 def run(d=1):
     print(f'Running {alg.__name__} with depth {d}')
     deep_pmd = alg(env, horizon=H, M_l=M_l, d=d, M_t=M_t, M_f=M_f)
+
     start = time.time()
-    info_dpmd = deep_pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr)
+    info_dpmd = deep_pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr, group=group)
     time_dpmd = time.time() - start
     print(f'{alg.__name__} with depth {d} took time {time_dpmd}')
-    return info_dpmd
+
+    info_df = pd.DataFrame.from_records(info_dpmd)
+    info_df.set_index('epoch', drop=True)
+    return info_df
 
 
 def run_thread(d=1):
@@ -40,67 +45,68 @@ def parse_alg(alg: str):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='PMD TS runner', description='Runner for PMD TS', epilog='')
-    parser.add_argument('--n_agents', '-n', type=int, default=5)
-    parser.add_argument('--env_name', '-e', type=str, default='Gridworld')
-    parser.add_argument('--horizon', '-t', type=int, default=25)
-    parser.add_argument('--alg', '-a', type=str, default='DPQA')
-    parser.add_argument('--gamma', '-g', type=float)
-    parser.add_argument('--epochs', type=int, default=200)
-    parser.add_argument('-l', type=float, default=0.1)
-    parser.add_argument('--exact', action='store_true')
-    parser.add_argument('--wandb', action='store_true')
+    parser.add_argument('--env_name', type=str, default='Gridworld')
     parser.add_argument('--size', '-s', type=int, default=32)
+    parser.add_argument('--horizon', '-t', type=int, default=25)
+    parser.add_argument('--gamma', '-g', type=float)
+
+    parser.add_argument('--n_agents', '-n', type=int, default=5)
+    parser.add_argument('--alg', '-a', type=str, default='DPQA')
+    parser.add_argument('--epochs', type=int, default=200)
+    parser.add_argument('--lr', '-l', type=float, default=0.1)
+    parser.add_argument('--exact', action='store_true')
+
+    parser.add_argument('--wandb', action='store_true')
+    parser.add_argument('--thread', action='store_true')
+    parser.add_argument('--group', type=str)
+
 
     args = parser.parse_args()
 
-    n_agents = args.n_agents
-    size = 32
     n_actions = 4
-
-
+    size = args.size
     horizon = args.horizon
-    gamma = args.gamma if 'gamma' in args else 1 - 1 / horizon
-    epochs = args.epochs
-    lr = args.lr
+    gamma = args.gamma or 1 - 1 / horizon
+    assert gamma >= 0 and gamma < 1
 
-    exact = args.exact
     use_wandb = args.wandb
+    thread = args.thread
+    group = args.group
 
     alg = parse_alg(args.alg)
+    n_agents = args.n_agents
+    exact = args.exact
+    lr = args.lr
+    epochs = args.epochs
 
-
+    """
     P = random_simplex((size, size, n_actions))
     R = random_simplex((size, n_actions))
     mu = random_simplex((size, ))
 
     #env = Tabular(P, R, mu, gamma)
     #env = Gridworld(int(np.sqrt(size)), gamma)
-    env = Trap(size, 1, gamma)
+    """
 
+    env = Trap(size, 1, gamma)
 
     H = 2 * horizon
     M_l = 2 * horizon
     M_t = horizon
     M_f = horizon
 
-
-    """
-    print('Running approx PI')
-    pi = PolicyIteration(env, H, n_trajectories=M_l)
-    start = time.time()
-    info_pi = pi.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True)
-    time_pi = time.time() - start
-    
-    print('Running PQA')
-    pmd = EQA(env, horizon=H, n_trajectories=M_l)
-    start = time.time()
-    info_pmd = pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr)
-    time_pmd = time.time() - start
-    """
-    
-    lr = lambda k: 0.1 / gamma**(2 * (k + 1) * 1)
-    run_thread(d=1)
-
     infos = []
-    for d in range(5, 5 * n_agents, 5):
-        run_thread(d=d)
+    ds = [1]
+    ds.extend(range(5, 5 * n_agents, 5))
+    for d in ds:
+        if thread:
+            run_thread(d=d)
+        else:
+            
+            infos.append(run(d=d))
+
+    for df in infos:
+        df.suboptimality.plot()
+
+    plt.yscale('log')
+    plt.show()

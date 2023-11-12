@@ -1,1 +1,1 @@
-python main.py --alg DPQA -n 5 --wandb
+python main.py --alg DPQA -n 5 --wandb --thread

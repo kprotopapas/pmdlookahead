@@ -70,22 +70,23 @@ class Algorithm(object):
             V = np.sum(self.pi.probas * Q, axis=1)
             sub = np.max(np.abs(V_opt - V))
 
-            # A = Q - Q.mean(axis=1)[..., np.newaxis]
-            A_est = gradient - gradient.mean(axis=1)[..., np.newaxis]
+            g_norm = gradient - gradient.mean(axis=1)[..., np.newaxis]
             err = gradient - grad_exact
             err = err - err.mean(axis=1)[..., np.newaxis] # for simplex or exp update mean doesn't matter
 
+            pi_entropy = np.mean(entropy(self.pi.probas, axis=1))
             out_log = {'epoch': k,
                            'suboptimality': sub,
                            'learning_rate': lrk,
-                           'pi_entropy': np.mean(entropy(self.pi.probas, axis=1))
+                           'pi_entropy': pi_entropy
                            }
             
             if dk is not None:
                 out_log['divergence'] = dk
             
+            norm_grad_error = np.max(np.abs(err)) / np.max(np.abs(g_norm))
             if not exact:
-                out_log['normalized_grad_error'] = np.max(np.abs(err)) / np.max(np.abs(grad_exact))
+                out_log['normalized_grad_error'] = norm_grad_error
                 out_log['samples'] = self.env.samples
 
             info.append(out_log)
@@ -242,7 +243,7 @@ class EQA(Algorithm):
 
 class DPMD(Algorithm):
     # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
-    def __init__(self, pi: Policy, name: str, env: Tabular, horizon: int=None,
+    def __init__(self, pi: Policy, name: str, env: Tabular, horizon: int = None,
                  M_l: int=None, d: int=1, M_t: int = None, M_f: int = None):
         
         M_t = M_t or M_l
