@@ -46,6 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--lr', '-l', type=float, default=0.1)
     parser.add_argument('--exact', action='store_true')
+    parser.add_argument('-d', type=int)
 
     parser.add_argument('--wandb', action='store_true')
     parser.add_argument('--group', type=str)
@@ -67,6 +68,7 @@ if __name__ == '__main__':
     exact = args.exact
     lr = args.lr
     epochs = args.epochs
+    d = args.d
 
     env = Trap(size, 1, gamma)
 
@@ -76,14 +78,12 @@ if __name__ == '__main__':
     M_f = horizon
 
     infos = []
-    ds = [1]
-    ds.extend(range(5, 5 * n_agents, 5))
     
     # TRY WITH LOGISTIC LEARNING RATE
 
     a = 75
     lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
-    for d in ds:
+    for _ in range(n_agents):
         print(f'Running {alg.__name__} with depth {d}')
         infos.append(run(d=d))
 
