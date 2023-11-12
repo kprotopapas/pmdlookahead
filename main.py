@@ -79,15 +79,6 @@ if __name__ == '__main__':
     lr = args.lr
     epochs = args.epochs
 
-    """
-    P = random_simplex((size, size, n_actions))
-    R = random_simplex((size, n_actions))
-    mu = random_simplex((size, ))
-
-    #env = Tabular(P, R, mu, gamma)
-    #env = Gridworld(int(np.sqrt(size)), gamma)
-    """
-
     env = Trap(size, 1, gamma)
 
     H = 2 * horizon
@@ -98,6 +89,11 @@ if __name__ == '__main__':
     infos = []
     ds = [1]
     ds.extend(range(5, 5 * n_agents, 5))
+    
+    # TRY WITH LOGISTIC LEARNING RATE
+
+    a = 75
+    lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
     for d in ds:
         if thread:
             run_thread(d=d)

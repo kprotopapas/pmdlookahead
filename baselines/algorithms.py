@@ -39,7 +39,6 @@ class Algorithm(object):
                 }
             for key, value in self.config.items():
                 config[key] = value
-
         
             wandb.init(
                 # set the wandb project where this run will be logged
