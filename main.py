@@ -2,7 +2,6 @@ import numpy as np
 import argparse
 from matplotlib import pyplot as plt
 import time
-from threading import Thread
 import pandas as pd
 
 from environments.discrete import *
@@ -10,9 +9,7 @@ from baselines.algorithms import *
 from helper import random_simplex
 
 def run(d=1):
-    print(f'Running {alg.__name__} with depth {d}')
     deep_pmd = alg(env, horizon=H, M_l=M_l, d=d, M_t=M_t, M_f=M_f)
-
     start = time.time()
     info_dpmd = deep_pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr, group=group)
     time_dpmd = time.time() - start
@@ -21,12 +18,6 @@ def run(d=1):
     info_df = pd.DataFrame.from_records(info_dpmd)
     info_df.set_index('epoch', drop=True)
     return info_df
-
-
-def run_thread(d=1):
-    daemon = Thread(target=run, kwargs={'d': d})
-    daemon.daemon = False
-    daemon.start()
 
 
 def parse_alg(alg: str):
@@ -57,7 +48,6 @@ if __name__ == '__main__':
     parser.add_argument('--exact', action='store_true')
 
     parser.add_argument('--wandb', action='store_true')
-    parser.add_argument('--thread', action='store_true')
     parser.add_argument('--group', type=str)
 
 
@@ -70,7 +60,6 @@ if __name__ == '__main__':
     assert gamma >= 0 and gamma < 1
 
     use_wandb = args.wandb
-    thread = args.thread
     group = args.group
 
     alg = parse_alg(args.alg)
@@ -95,15 +84,12 @@ if __name__ == '__main__':
     a = 75
     lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
     for d in ds:
-        if thread:
-            run_thread(d=d)
-        else:
-            infos.append(run(d=d))
+        print(f'Running {alg.__name__} with depth {d}')
+        infos.append(run(d=d))
 
-    if not thread:
-        for df in infos:
-            df.suboptimality.plot()
+    for df in infos:
+        df.suboptimality.plot()
 
-        plt.yscale('log')
-        plt.show()
+    plt.yscale('log')
+    plt.show()
     
