@@ -34,7 +34,7 @@ if __name__ == '__main__':
         f"""#!/bin/bash
 #SBATCH -n 4
 #SBATCH --time=1:00:00
-#SBATCH --job-name=logistic{d}/logistic{d}
+#SBATCH --job-name=logistic{d}
 #SBATCH --output=logistic{d}/logistic{d}.out
 #SBATCH --error=logistic{d}/logistic{d}.err
 
