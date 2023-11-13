@@ -40,7 +40,7 @@ if __name__ == '__main__':
         script = \
         f"""#!/bin/bash
 #SBATCH -n 1
-#SBATCH --time=3:00
+#SBATCH --time=30:00
 #SBATCH --job-name={group}{d}/{i}
 #SBATCH --output=runs/{group}_{d}/{i}/output.out
 #SBATCH --error=runs/{group}_{d}/{i}/error.err
