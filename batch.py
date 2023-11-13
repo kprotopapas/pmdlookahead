@@ -32,18 +32,18 @@ if __name__ == '__main__':
     group = args.group
 
     for i in range(n_agents):
-        if f'logistic_{d}' not in os.listdir():
-            os.mkdir(f'logistic_{d}')
+        if f'runs/{group}_{d}' not in os.listdir():
+            os.mkdir(f'runs/{group}_{d}')
         
-        os.mkdir(f'logistic_{d}/{i}')
+        os.mkdir(f'runs/{group}_{d}/{i}')
 
         script = \
         f"""#!/bin/bash
 #SBATCH -n 1
-#SBATCH --time=30:00
-#SBATCH --job-name=logistic{d}/{i}
-#SBATCH --output=logistic_{d}/{i}/output.out
-#SBATCH --error=logistic_{d}/{i}/error.err
+#SBATCH --time=3:00
+#SBATCH --job-name={group}{d}/{i}
+#SBATCH --output=runs/{group}_{d}/{i}/output.out
+#SBATCH --error=runs/{group}_{d}/{i}/error.err
 
 module load gcc/8.2.0 python/3.10.4
 source cluster-venv/bin/activate
