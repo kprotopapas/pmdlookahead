@@ -15,6 +15,8 @@ if __name__ == '__main__':
     parser.add_argument('--exact', action='store_true')
     parser.add_argument('-d', type=int, default=1)
 
+    parser.add_argument('--group', type=str)
+
 
     args = parser.parse_args()
 
@@ -26,6 +28,8 @@ if __name__ == '__main__':
     lr = args.lr
     epochs = args.epochs
     d = args.d
+    
+    group = args.group
 
     for i in range(n_agents):
         if f'logistic_{d}' not in os.listdir():
@@ -44,7 +48,7 @@ if __name__ == '__main__':
 module load gcc/8.2.0 python/3.10.4
 source cluster-venv/bin/activate
 wandb offline
-python main.py --alg {alg} -n {n_agents} -s {size} -t {horizon} --epochs {epochs} --wandb --group logistic_v1 -d {d}
+python main.py --alg {alg} -n {n_agents} -s {size} -t {horizon} --epochs {epochs} --wandb --group {group} -d {d}
 """
         
         with open(f'script_{d}_{i}', 'w') as f:
