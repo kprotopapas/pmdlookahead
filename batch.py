@@ -32,7 +32,7 @@ if __name__ == '__main__':
     group = args.group
 
     for i in range(n_agents):
-        if f'runs/{group}_{d}' not in os.listdir():
+        if f'{group}_{d}' not in os.listdir('runs'):
             os.mkdir(f'runs/{group}_{d}')
         
         os.mkdir(f'runs/{group}_{d}/{i}')
