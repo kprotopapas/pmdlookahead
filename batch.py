@@ -30,8 +30,7 @@ if __name__ == '__main__':
     ds.extend(range(5, 25, 5))
     for d in ds:
         os.mkdir(f'logistic{d}')
-        script = f"""
-        #!/bin/bash
+        script = f"""#!/bin/bash
 
         #SBATCH -n 4
         #SBATCH --time=1:00:00
