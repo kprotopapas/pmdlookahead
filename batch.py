@@ -46,7 +46,7 @@ python main.py --alg {alg} -n {n_agents} -s {size} -t {horizon} --epochs {epochs
         with open(f'script{d}', 'w') as f:
             f.write(script)
         
-        subprocess.run(['sbatch', 'script'])
+        subprocess.run(['sbatch', f'script{d}'])
 
         time.sleep(1)
         os.remove(f'script{d}')
