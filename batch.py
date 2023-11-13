@@ -25,28 +25,32 @@ if __name__ == '__main__':
     n_agents = args.n_agents
     lr = args.lr
     epochs = args.epochs
+    d = args.d
 
-    ds = [1]
-    ds.extend(range(5, 25, 5))
-    for d in ds:
-        os.mkdir(f'logistic{d}')
+    for i in range(n_agents):
+        if f'logistic_{d}' not in os.listdir():
+            os.mkdir(f'logistic_{d}')
+        
+        os.mkdir(f'logistic_{d}/{i}')
+
         script = \
         f"""#!/bin/bash
 #SBATCH -n 4
 #SBATCH --time=1:00:00
-#SBATCH --job-name=logistic{d}
-#SBATCH --output=logistic{d}/logistic{d}.out
-#SBATCH --error=logistic{d}/logistic{d}.err
+#SBATCH --job-name=logistic{d}/{i}
+#SBATCH --output=logistic_{d}/{i}/output.out
+#SBATCH --error=logistic_{d}/{i}/error.err
 
 module load gcc/8.2.0 python/3.10.4
 source cluster-venv/bin/activate
+wandb offline
 python main.py --alg {alg} -n {n_agents} -s {size} -t {horizon} --epochs {epochs} --wandb --group logistic_v1 -d {d}
 """
         
-        with open(f'script{d}', 'w') as f:
+        with open(f'script_{d}_{i}', 'w') as f:
             f.write(script)
         
-        subprocess.run(['sbatch', f'script{d}'])
+        subprocess.run(['sbatch', f'script_{d}_{i}'])
 
         time.sleep(1)
-        os.remove(f'script{d}')
+        os.remove(f'script_{d}_{i}')
