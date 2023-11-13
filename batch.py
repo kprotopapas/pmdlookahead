@@ -35,8 +35,8 @@ if __name__ == '__main__':
 
         script = \
         f"""#!/bin/bash
-#SBATCH -n 4
-#SBATCH --time=1:00:00
+#SBATCH -n 1
+#SBATCH --time=30:00
 #SBATCH --job-name=logistic{d}/{i}
 #SBATCH --output=logistic_{d}/{i}/output.out
 #SBATCH --error=logistic_{d}/{i}/error.err
