@@ -38,7 +38,7 @@ class Algorithm(object):
             for key, value in self.config.items():
                 config[key] = value
         
-            wandb.init(
+            run = wandb.init(
                 # set the wandb project where this run will be logged
                 project="pmd-ts",
                 # track hyperparameters and run metadata
@@ -98,7 +98,7 @@ class Algorithm(object):
         if use_wandb:
             if verbose:
                 print('Finishing wandb job...')
-            wandb.finish()
+            run.finish()
 
         return info
 
