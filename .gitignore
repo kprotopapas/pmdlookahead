@@ -6,5 +6,6 @@ runs/*
 .vscode
 cluster-venv
 test.sh
-euler
-
+script*
+logistic*
+clean
