@@ -38,17 +38,9 @@ class Algorithm(object):
             for key, value in self.config.items():
                 config[key] = value
         
-            run = wandb.init(
-                # set the wandb project where this run will be logged
-                project="pmd-ts",
-                # track hyperparameters and run metadata
-                config=config,
-                group=group
-                
-            )
+            run = wandb.init(project="pmd-ts", config=config, group=group)
 
         V_opt = self.env.optimal().max(axis=1)
-
         self.env.reset(samples=True)
 
         for k in range(epochs):
