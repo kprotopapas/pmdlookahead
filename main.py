@@ -5,7 +5,7 @@ import time
 import pandas as pd
 
 from environments.discrete import *
-from baselines.algorithms import *
+from algorithms.baselines import *
 from helper import random_simplex
 
 def run(d=1):

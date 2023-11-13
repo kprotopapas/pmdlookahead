@@ -1,7 +1,5 @@
-import gymnasium as gym
 from environments.discrete import Tabular
-from helper import np
-from baselines.policies import DirectPolicy, Policy, SoftmaxPolicy
+from algorithms.policies import DirectPolicy, Policy, SoftmaxPolicy
 from scipy.stats import entropy
 
 import numpy as np
@@ -98,6 +96,8 @@ class Algorithm(object):
                 
 
         if use_wandb:
+            if verbose:
+                print('Finishing wandb job...')
             wandb.finish()
 
         return info

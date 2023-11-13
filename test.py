@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from environments.discrete import Tabular, Trap
-from baselines.algorithms import DEQA
+from algorithms.baselines import DEQA
 from helper import random_simplex
 
 if __name__ == '__main__':
