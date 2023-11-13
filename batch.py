@@ -21,8 +21,6 @@ if __name__ == '__main__':
     size = args.size
     horizon = args.horizon
 
-    use_wandb = args.wandb
-
     alg = args.alg.upper()
     n_agents = args.n_agents
     lr = args.lr
