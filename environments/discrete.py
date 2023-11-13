@@ -2,7 +2,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 
-from baselines.policies import Policy
+from algorithms.policies import Policy
 
 
 class Tabular(gym.Env):
