@@ -1,29 +1,28 @@
-import numpy as np
-import argparse
-from matplotlib import pyplot as plt
-import time
-import pandas as pd
-
-from environments.discrete import *
-from baselines.algorithms import *
-from helper import random_simplex
+import os
+import subprocess
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog='Euler Batch creator', description='Creates and Runs batch files for euler', epilog='')
-    parser.add_argument('--env_name', type=str, default='Gridworld')
-    parser.add_argument('--size', '-s', type=int, default=32)
-    parser.add_argument('--horizon', '-t', type=int, default=25)
-    parser.add_argument('--gamma', '-g', type=float)
 
-    parser.add_argument('--n_agents', '-n', type=int, default=5)
-    parser.add_argument('--alg', '-a', type=str, default='DPQA')
-    parser.add_argument('--epochs', type=int, default=200)
-    parser.add_argument('--lr', '-l', type=float, default=0.1)
-    parser.add_argument('--exact', action='store_true')
-    parser.add_argument('-ds', type=[int])
+    ds = [1]
+    ds.extend(range(5, 25, 5))
+    for d in ds:
+        os.mkdir(f'logistic{d}')
+        script = f"""
+        #!/bin/bash
 
-    parser.add_argument('--wandb', action='store_true')
-    parser.add_argument('--group', type=str)
+        #SBATCH -n 4
+        #SBATCH --time=1:00:00
+        #SBATCH --job-name=logistic{d}/logistic{d}
+        #SBATCH --output=logistic{d}/logistic{d}.out
+        #SBATCH --error=logistic{d}/logistic{d}.err
 
-    
+        module load gcc/8.2.0 python/3.10.4
+        source cluster-venv/bin/activate
+        python main.py --alg DPQA -n 10 -s 8 -t 10 --epochs 50 --wandb --group logistic_v1 -d {d}
+        """
+        
+        with open('script', 'w') as f:
+            f.write(script)
+        
+        subprocess.run(['sbatch', 'script'])
