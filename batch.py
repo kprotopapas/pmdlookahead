@@ -48,7 +48,7 @@ if __name__ == '__main__':
 module load gcc/8.2.0 python/3.10.4
 source cluster-venv/bin/activate
 wandb offline
-python main.py --alg {alg} -n {n_agents} -s {size} -t {horizon} --epochs {epochs} --wandb --group {group} -d {d}
+python main.py --alg {alg} -n 1 -s {size} -t {horizon} --epochs {epochs} --wandb --group {group} -d {d}
 """
         
         with open(f'script_{d}_{i}', 'w') as f:
