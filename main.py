@@ -92,4 +92,5 @@ if __name__ == '__main__':
 
     plt.yscale('log')
     plt.show()
-    
+
+    print('Finished, exiting...')
