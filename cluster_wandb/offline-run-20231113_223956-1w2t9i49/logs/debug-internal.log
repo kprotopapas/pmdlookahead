@@ -1,3 +1,0 @@
-2023-11-13 22:39:59,661 INFO    MainThread:65203 [internal.py:wandb_internal():90] W&B internal server running at pid: 65203, started at: 2023-11-13 22:39:59.660336
-2023-11-13 22:39:59,663 DEBUG   HandlerThread:65203 [handler.py:handle_request():141] handle_request: run_start
-2023-11-13 22:39:59,667 INFO    WriterThread:65203 [datastore.py:open_for_write():75] open: /cluster/home/kprotopapas/Documents/rl/project/wandb/offline-run-20231113_223956-1w2t9i49/run-1w2t9i49.wandb

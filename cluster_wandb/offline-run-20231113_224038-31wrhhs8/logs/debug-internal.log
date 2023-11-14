@@ -1,3 +1,0 @@
-2023-11-13 22:40:42,398 INFO    MainThread:20547 [internal.py:wandb_internal():90] W&B internal server running at pid: 20547, started at: 2023-11-13 22:40:42.397893
-2023-11-13 22:40:42,400 DEBUG   HandlerThread:20547 [handler.py:handle_request():141] handle_request: run_start
-2023-11-13 22:40:42,403 INFO    WriterThread:20547 [datastore.py:open_for_write():75] open: /cluster/home/kprotopapas/Documents/rl/project/wandb/offline-run-20231113_224038-31wrhhs8/run-31wrhhs8.wandb
