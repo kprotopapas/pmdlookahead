@@ -73,7 +73,7 @@ if __name__ == '__main__':
     env = Trap(size, 1, gamma)
 
     H = 2 * horizon
-    M_l = 2 * horizon
+    M_l = 1
     M_t = horizon
     M_f = horizon
 

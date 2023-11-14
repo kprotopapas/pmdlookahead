@@ -1,0 +1,21 @@
+2023-11-14 00:24:03,576 INFO    MainThread:130768 [wandb_setup.py:_flush():76] Loading settings from /cluster/home/kprotopapas/.config/wandb/settings
+2023-11-14 00:24:03,576 INFO    MainThread:130768 [wandb_setup.py:_flush():76] Loading settings from /cluster/home/kprotopapas/Documents/rl/project/wandb/settings
+2023-11-14 00:24:03,576 INFO    MainThread:130768 [wandb_setup.py:_flush():76] Loading settings from environment variables: {}
+2023-11-14 00:24:03,576 INFO    MainThread:130768 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': 'main.py', 'program': '/cluster/home/kprotopapas/Documents/rl/project/main.py'}
+2023-11-14 00:24:03,577 INFO    MainThread:130768 [wandb_init.py:_log_setup():428] Logging user logs to /cluster/home/kprotopapas/Documents/rl/project/wandb/offline-run-20231114_002403-tnj7kuip/logs/debug.log
+2023-11-14 00:24:03,577 INFO    MainThread:130768 [wandb_init.py:_log_setup():429] Logging internal logs to /cluster/home/kprotopapas/Documents/rl/project/wandb/offline-run-20231114_002403-tnj7kuip/logs/debug-internal.log
+2023-11-14 00:24:03,577 INFO    MainThread:130768 [wandb_init.py:init():462] calling init triggers
+2023-11-14 00:24:03,577 INFO    MainThread:130768 [wandb_init.py:init():465] wandb.init called with sweep_config: {}
+config: {'learning_rate': 'custom', 'epochs': 200, 'exact': False, 'algorithm': '15-PQA', 'environment': {'name': 'Trap-32', 'gamma': 0.96}, 'horizon': 50, 'n_trajectories': 50}
+2023-11-14 00:24:03,577 INFO    MainThread:130768 [wandb_init.py:init():515] starting backend
+2023-11-14 00:24:03,577 INFO    MainThread:130768 [backend.py:_multiprocessing_setup():97] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2023-11-14 00:24:03,580 INFO    MainThread:130768 [backend.py:ensure_launched():217] starting backend process...
+2023-11-14 00:24:03,584 INFO    MainThread:130768 [backend.py:ensure_launched():222] started backend process with pid: 50556
+2023-11-14 00:24:03,585 INFO    MainThread:130768 [wandb_init.py:init():525] backend started and connected
+2023-11-14 00:24:03,587 INFO    MainThread:130768 [wandb_init.py:init():596] updated telemetry
+2023-11-14 00:24:03,669 INFO    MainThread:130768 [wandb_init.py:init():662] starting run threads in backend
+2023-11-14 00:24:08,676 INFO    MainThread:130768 [wandb_run.py:_console_start():1898] atexit reg
+2023-11-14 00:24:08,686 INFO    MainThread:130768 [wandb_run.py:_redirect():1771] redirect: SettingsConsole.REDIRECT
+2023-11-14 00:24:08,686 INFO    MainThread:130768 [wandb_run.py:_redirect():1776] Redirecting console.
+2023-11-14 00:24:08,695 INFO    MainThread:130768 [wandb_run.py:_redirect():1832] Redirects installed.
+2023-11-14 00:24:08,695 INFO    MainThread:130768 [wandb_init.py:init():688] run started, returning control to user process

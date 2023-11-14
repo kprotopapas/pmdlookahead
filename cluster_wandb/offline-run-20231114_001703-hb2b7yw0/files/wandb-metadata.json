@@ -1,0 +1,38 @@
+{
+    "os": "Linux-3.10.0-1160.95.1.el7.x86_64-x86_64-with-glibc2.17",
+    "python": "3.10.4",
+    "heartbeatAt": "2023-11-13T23:18:41.469660",
+    "startedAt": "2023-11-13T23:17:03.347313",
+    "docker": null,
+    "cpu_count": 128,
+    "cuda": null,
+    "args": [
+        "--alg",
+        "DPQA",
+        "-n",
+        "10",
+        "-s",
+        "32",
+        "-t",
+        "25",
+        "--epochs",
+        "200",
+        "--wandb",
+        "--group",
+        "logistic_v1",
+        "-d",
+        "20"
+    ],
+    "state": "running",
+    "program": "/cluster/home/kprotopapas/Documents/rl/project/main.py",
+    "codePath": "main.py",
+    "git": {
+        "remote": "git@gitlab.com:kimon.protopapa/rl-project.git",
+        "commit": "4046f1e09c7778da966a6eb7602f2707b4827ec0"
+    },
+    "email": null,
+    "root": "/cluster/home/kprotopapas/Documents/rl/project",
+    "host": "eu-a2p-516",
+    "username": "kprotopapas",
+    "executable": "/cluster/home/kprotopapas/Documents/rl/project/cluster-venv/bin/python"
+}
