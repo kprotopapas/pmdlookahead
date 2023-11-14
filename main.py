@@ -72,10 +72,10 @@ if __name__ == '__main__':
 
     env = Trap(size, 1, gamma)
 
-    H = 2 * horizon
+    H = horizon // 2
     M_l = 1
-    M_t = 5 * env.n_act
-    M_f = 5 * env.n_act
+    M_t = 2 * env.n_act
+    M_f = 2 * env.n_act
 
     infos = []
     
