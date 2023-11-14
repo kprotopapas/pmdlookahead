@@ -74,8 +74,8 @@ if __name__ == '__main__':
 
     H = 2 * horizon
     M_l = 1
-    M_t = horizon
-    M_f = horizon
+    M_t = 5 * env.n_act
+    M_f = 5 * env.n_act
 
     infos = []
     

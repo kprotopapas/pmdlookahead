@@ -113,6 +113,13 @@ class Tabular(gym.Env):
         return Q
 
 
+    def copy(self):
+        env = Tabular(np.copy(self.P), np.copy(self.R), np.copy(self.mu), self.gamma, self.name)
+        env.state = self.state
+        env.samples = self.samples
+    
+        return env
+
 class Trap(Tabular):
     # Defines a Trap environment, where an agent needs to sacrifice immediate reward for large future reward
     # Reward structure looks like: [large, -1, ..., -1, -1, 0, +1, +1, ..., +1, -large]
