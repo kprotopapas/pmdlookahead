@@ -245,6 +245,8 @@ class DPMD(Algorithm):
         self.M_f = M_f
         self.d = d
         super().__init__(env, horizon, M_l, pi, name)
+        self.config['n_tree'] = M_t
+        self.config['n_final'] = M_f
 
     
     def grad(self, V):
