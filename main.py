@@ -70,12 +70,17 @@ if __name__ == '__main__':
     epochs = args.epochs
     d = args.d
 
-    env = Trap(size, 1, gamma)
+    #env = Trap(size, 1, gamma)
+    P = random_simplex((size, size, 4))
+    R = random_simplex((size, 4))
+    mu = random_simplex((size,))
+    
+    env = Tabular(P, R, mu, gamma)
 
-    H = horizon // 2
-    M_l = 1
-    M_t = 4 * n_actions
-    M_f = 4 * n_actions
+    H = horizon
+    M_l = 10
+    M_t = 10
+    M_f = 10
 
     infos = []
     
