@@ -74,8 +74,9 @@ if __name__ == '__main__':
     R = random_simplex((size, 4))
     mu = random_simplex((size,))
     
-    env = Tabular(P, R, mu, gamma)
+    #env = Tabular(P, R, mu, gamma)
     #env = Trap(size, 1, gamma)
+    env = Deepsea(size, gamma)
 
 
     H = 2 * horizon
