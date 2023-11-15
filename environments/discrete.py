@@ -120,6 +120,7 @@ class Tabular(gym.Env):
     
         return env
 
+
 class Trap(Tabular):
     # Defines a Trap environment, where an agent needs to sacrifice immediate reward for large future reward
     # Reward structure looks like: [large, -1, ..., -1, -1, 0, +1, +1, ..., +1, -large]
@@ -131,10 +132,10 @@ class Trap(Tabular):
         P[:, 1:, 0] = np.identity(size)[:, :-1]
         P[0, 0, 0] = 1
 
-        P[:, :-1, 1] = np.identity(size)[:, 1:]
-        P[-1, -1, 1] = 1
+        P[:, :-1, 2] = np.identity(size)[:, 1:]
+        P[-1, -1, 2] = 1
 
-        P[:, :, 2] = np.identity(size)
+        P[:, :, 1] = np.identity(size)
 
         factor *= 1 / gamma**length
 
@@ -147,9 +148,9 @@ class Trap(Tabular):
         R = np.zeros((size, n_actions))
         R[1:, 0] = self.values[:-1]
         R[0, 0] = self.values[0]
-        R[:-1, 1] = self.values[1:]
-        R[-1, 1] = self.values[-1]
-        R[:, 2] = self.values # NO OP
+        R[:-1, 2] = self.values[1:]
+        R[-1, 2] = self.values[-1]
+        R[:, 1] = self.values # NO OP
 
         R = R / np.max(np.abs(R))
 
@@ -219,5 +220,56 @@ class Gridworld(Tabular):
 
         y, x = np.argwhere(self.grid == self.state)[0]
         grid_str[y, x] = '#'
+
+        return str(grid_str)
+
+
+class Deepsea(Tabular):
+    # Deepsea environment from bsuite
+    def __init__(self, size: int, gamma: float):
+        self.size = size
+
+        n_obs = size**2
+        n_act = 2 # stay or go right
+        self.grid = np.arange(n_obs).reshape((size, size))
+
+        mu = np.zeros((n_obs, ))
+        mu[0] = 1
+
+        P = np.zeros((n_obs, n_obs, n_act))
+        R = np.zeros((n_obs, n_act))
+        R[:, 1] = -0.1 * gamma**size
+
+        for s in range(n_obs):
+            for a in range(n_act):
+                sp = self.transition(s, a)
+                P[sp, s, a] = 1
+                if sp == n_obs - 1:
+                    R[s, a] = 1
+
+        R[-size:, :] = 0
+
+        name = f'Deepsea-v2-{self.size}'
+
+        super().__init__(P, R, mu, gamma, name=name)
+
+
+    def transition(self, state, action):
+        y, x = np.argwhere(self.grid == state)[0]
+        mv = (2 * action - 1) * (y != self.size - 1)
+
+        new_y, new_x = np.array([y + 1, x + mv], dtype=np.int8).clip(0, self.size - 1)
+        return self.grid[new_y, new_x]
+    
+
+    def step(self, action):
+        state, action, info = super().step(action)
+        return state, action, info
+    
+
+    def __str__(self):
+        grid_str = self.grid.astype('str')
+        y, x = np.argwhere(self.grid == self.state)[0]
+        grid_str[y, x] = 'X'
 
         return str(grid_str)
