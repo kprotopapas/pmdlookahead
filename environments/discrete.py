@@ -152,7 +152,7 @@ class Trap(Tabular):
 
         mu = 1 * (np.arange(size) == length)
         
-        name = f'Trap-{length}'
+        name = f'Trap-v2-{length}'
         super().__init__(P, R, mu, gamma, name=name)
 
 
