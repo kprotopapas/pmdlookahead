@@ -130,8 +130,11 @@ class Trap(Tabular):
         P = np.zeros((size, size, n_actions))
         P[:, 1:, 0] = np.identity(size)[:, :-1]
         P[0, 0, 0] = 1
+
         P[:, :-1, 1] = np.identity(size)[:, 1:]
         P[-1, -1, 1] = 1
+
+        P[:, :, 2] = np.identity(size)
 
         factor *= 1 / gamma**length
 
