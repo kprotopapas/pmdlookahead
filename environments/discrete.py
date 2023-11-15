@@ -125,7 +125,9 @@ class Trap(Tabular):
     # Reward structure looks like: [large, -1, ..., -1, -1, 0, +1, +1, ..., +1, -large]
     def __init__(self, length: int, factor: float, gamma: float):
         size = 2 * length + 1
-        P = np.zeros((size, size, 3))
+        n_actions = 3
+
+        P = np.zeros((size, size, n_actions))
         P[:, 1:, 0] = np.identity(size)[:, :-1]
         P[0, 0, 0] = 1
         P[:, :-1, 1] = np.identity(size)[:, 1:]
@@ -139,7 +141,7 @@ class Trap(Tabular):
         self.values[1:length] = -1
         self.values[length + 1:-1] = 1
 
-        R = np.zeros((size, 2))
+        R = np.zeros((size, n_actions))
         R[1:, 0] = self.values[:-1]
         R[0, 0] = self.values[0]
         R[:-1, 1] = self.values[1:]
