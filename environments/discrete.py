@@ -124,18 +124,19 @@ class Tabular(gym.Env):
 class Trap(Tabular):
     # Defines a Trap environment, where an agent needs to sacrifice immediate reward for large future reward
     # Reward structure looks like: [large, -1, ..., -1, -1, 0, +1, +1, ..., +1, -large]
-    def __init__(self, length: int, factor: float, gamma: float):
+    def __init__(self, length: int, factor: float, gamma: float, noop: bool = False):
         size = 2 * length + 1
-        n_actions = 3
+        n_actions = 3 if noop else 2
 
         P = np.zeros((size, size, n_actions))
         P[:, 1:, 0] = np.identity(size)[:, :-1]
         P[0, 0, 0] = 1
 
-        P[:, :-1, 2] = np.identity(size)[:, 1:]
-        P[-1, -1, 2] = 1
+        P[:, :-1, -1] = np.identity(size)[:, 1:]
+        P[-1, -1, -1] = 1
 
-        P[:, :, 1] = np.identity(size)
+        if noop:
+            P[:, :, 1] = np.identity(size)
 
         factor *= 1 / gamma**length
 
@@ -148,9 +149,11 @@ class Trap(Tabular):
         R = np.zeros((size, n_actions))
         R[1:, 0] = self.values[:-1]
         R[0, 0] = self.values[0]
-        R[:-1, 2] = self.values[1:]
-        R[-1, 2] = self.values[-1]
-        R[:, 1] = self.values # NO OP
+        R[:-1, -1] = self.values[1:]
+        R[-1, -1] = self.values[-1]
+
+        if noop:
+            R[:, 1] = self.values # NO OP
 
         R = R / np.max(np.abs(R))
 
