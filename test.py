@@ -34,7 +34,7 @@ sub = best - temp.max()
 
 errors = []
 n = 1000
-wandb.init(project="pmd-ts", config={'alg': 'MCTS', 'env': 'Deepsea', 'size': size, 'depth': depth, 'gamma': gamma}, group='delete')
+wandb.init(project="pmd-ts", config={'algorithm': 'MCTS', 'env': 'Deepsea', 'size': size, 'depth': depth, 'gamma': gamma}, group='delete')
 for _ in range(n):
     tree.sample_trajectory(state=state)
     root = tree.roots[state].values
