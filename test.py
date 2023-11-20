@@ -15,7 +15,7 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', '-g', type=float)
 
     parser.add_argument('--alg', '-a', type=str, default='MCTS')
-    parser.add_argument('--epochs', type=int, default=1000)
+    parser.add_argument('--epochs', type=int, default=10000)
     parser.add_argument('--lr', '-l', type=float, default=np.sqrt(2))
     parser.add_argument('-d', type=int)
 
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     alg = BanditTS if args.alg.upper() == 'BANDITTS' else MCTS
     use_wandb = args.wandb
     alpha = args.lr
-    depth = args.d or size
+    max_depth = args.d or size
     n = args.epochs
     horizon = args.horizon
 
@@ -37,12 +37,12 @@ if __name__ == '__main__':
     env = Trap(size, gamma)
     pi = SoftmaxPolicy(env.observation_space, env.action_space)
 
-    state = size
-    tree = MCTS(env, pi, max_depth=depth, alpha=alpha)
+    state = 10
+    tree = MCTS(env, pi, max_depth=max_depth, alpha=alpha)
 
 
     tdm = env.V(pi)
-    for i in range(depth - 1):
+    for i in range(max_depth - 1):
         tdm = env.bellman(tdm)
 
     next_V = np.sum(env.P * tdm[..., np.newaxis, np.newaxis], axis=0)
@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
     errors = []
     wandb.init(project="pmd-ts", config={'algorithm': alg, 'env': 'Trap',
-                                        'size': size, 'depth': depth, 'gamma': gamma,
+                                        'size': size, 'depth': max_depth, 'gamma': gamma,
                                         'alpha': alpha},
                                         group=group)
     for i in range(n):
@@ -71,8 +71,6 @@ if __name__ == '__main__':
         error = np.max(np.abs(qdnorm - rnorm))
         errors.append(error)
         wandb.log({'err': error})
-        if i % 100 == 0:
-            pass
 
 
     # ts = np.array([[tree.nodes[d][i].t for i in range(env.n_obs)] for d in range(depth + 1)])
@@ -83,3 +81,4 @@ if __name__ == '__main__':
     plt.yscale('log')
 
     plt.show()
+    pass

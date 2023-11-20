@@ -11,6 +11,7 @@ class MCTS(object):
     def __init__(self, env: Tabular, pi: Policy, max_depth: int = 1, alpha: float = np.sqrt(2), horizon: int = 10) -> None:
         self.env = env
         self.alpha = alpha
+        self.max_depth = max_depth
         
         factory = lambda: MCTSNode(env, pi, depth=0, alpha=alpha, horizon=horizon, max_depth=max_depth)
         self.roots = defaultdict(factory)
@@ -21,8 +22,9 @@ class MCTS(object):
             state = self.env.state
         else:
             self.env.state = state
-            
-        return self.roots[state].explore()
+
+        root = self.roots[state]
+        return root.explore()
 
 
 class MCTSNode(object):
@@ -38,11 +40,12 @@ class MCTSNode(object):
         self.t = 0
 
         if self.depth + 1 == self.max_depth:
-            factory = lambda: MCTSNode(env, pi, depth + 1, horizon, max_depth)
+            self.factory = lambda: Leaf(env, pi, depth + 1, horizon)
         else:
-            factory = lambda: Leaf(env, pi, depth + 1, horizon)
+            self.factory = lambda: MCTSNode(env, pi, depth + 1, alpha=self.alpha,
+                                            horizon=self.horizon, max_depth=self.max_depth)
             
-        self.children = defaultdict(factory)
+        self.children = defaultdict(self.factory)
         self.s = np.zeros((self.env.n_act, ))
         self.values = np.zeros_like(self.s)
 
