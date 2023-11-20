@@ -1,11 +1,14 @@
 from environments.solvable import Tabular
 from algorithms.policies import DirectPolicy, Policy, SoftmaxPolicy
 from scipy.stats import entropy
+import logging
 
 import numpy as np
 import wandb
 
 from typing import Callable
+
+logging.basicConfig(level=logging.INFO)
 
 
 class Algorithm(object):
@@ -81,7 +84,7 @@ class Algorithm(object):
             info.append(out_log)
             
             if verbose:
-                print(f'Epoch: {k}, suboptimality: {sub}')
+                logging.info(f'Epoch: {k}, suboptimality: {sub}')
 
             if use_wandb:
                 wandb.log(out_log)
