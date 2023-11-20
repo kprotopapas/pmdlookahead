@@ -19,7 +19,9 @@ class MCTS(object):
     def sample_trajectory(self, state: int = None):
         if state is None:
             state = self.env.state
-        
+        else:
+            self.env.state = state
+            
         return self.roots[state].explore()
 
 

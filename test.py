@@ -62,7 +62,7 @@ if __name__ == '__main__':
                                         'size': size, 'depth': depth, 'gamma': gamma,
                                         'alpha': alpha},
                                         group=group)
-    for _ in range(n):
+    for i in range(n):
         tree.sample_trajectory(state=state)
         root = tree.roots[state].values
         #root = tree.nodes[0][state].values
@@ -71,6 +71,8 @@ if __name__ == '__main__':
         error = np.max(np.abs(qdnorm - rnorm))
         errors.append(error)
         wandb.log({'err': error})
+        if i % 100 == 0:
+            pass
 
 
     # ts = np.array([[tree.nodes[d][i].t for i in range(env.n_obs)] for d in range(depth + 1)])
