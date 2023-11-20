@@ -7,7 +7,8 @@ import wandb
 
 
 size=13
-env = Deepsea(size, 0.99)
+gamma = 0.99
+env = Deepsea(size, gamma)
 pi = SoftmaxPolicy(env.observation_space, env.action_space)
 
 state = size
@@ -33,6 +34,7 @@ sub = best - temp.max()
 
 errors = []
 n = 1000
+wandb.init(project="pmd-ts", config={'alg': 'MCTS', 'env': 'Deepsea', 'size': size, 'depth': depth, 'gamma': gamma}, group='delete')
 for _ in range(n):
     tree.sample_trajectory(state=state)
     root = tree.roots[state].values
@@ -41,7 +43,7 @@ for _ in range(n):
     rnorm = root - root.max()
     error = np.max(np.abs(qdnorm - rnorm))
     errors.append(error)
-    pass
+    wandb.log({'err': error})
 
 
 # ts = np.array([[tree.nodes[d][i].t for i in range(env.n_obs)] for d in range(depth + 1)])
