@@ -26,7 +26,7 @@ if __name__ == '__main__':
     group = args.group
 
     size = args.size
-    alg = MCTS if args.alg.upper() == 'MCTS' else BanditTS
+    alg = BanditTS if args.alg.upper() == 'BANDITTS' else MCTS
     use_wandb = args.wandb
     alpha = args.lr
     depth = args.d or size
@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
 
     errors = []
-    wandb.init(project="pmd-ts", config={'algorithm': 'MCTS', 'env': 'Trap',
+    wandb.init(project="pmd-ts", config={'algorithm': alg, 'env': 'Trap',
                                         'size': size, 'depth': depth, 'gamma': gamma,
                                         'alpha': alpha},
                                         group=group)
