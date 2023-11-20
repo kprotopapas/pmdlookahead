@@ -18,6 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=10000)
     parser.add_argument('--lr', '-l', type=float, default=np.sqrt(2))
     parser.add_argument('-d', type=int)
+    parser.add_argument('-n', type=int)
 
     parser.add_argument('--wandb', action='store_true')
 
