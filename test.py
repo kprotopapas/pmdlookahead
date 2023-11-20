@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--alg', '-a', type=str, default='MCTS')
     parser.add_argument('--epochs', type=int, default=1000)
-    parser.add_argument('--lr', '-l', type=float, default=0.1)
+    parser.add_argument('--lr', '-l', type=float, default=np.sqrt(2))
     parser.add_argument('-d', type=int)
 
     parser.add_argument('--wandb', action='store_true')
@@ -59,8 +59,9 @@ if __name__ == '__main__':
 
 
     errors = []
-    wandb.init(project="pmd-ts", config={'algorithm': 'MCTS', 'env': 'Deepsea',
-                                        'size': size, 'depth': depth, 'gamma': gamma},
+    wandb.init(project="pmd-ts", config={'algorithm': 'MCTS', 'env': 'Trap',
+                                        'size': size, 'depth': depth, 'gamma': gamma,
+                                        'alpha': alpha},
                                         group=group)
     for _ in range(n):
         tree.sample_trajectory(state=state)
