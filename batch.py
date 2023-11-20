@@ -5,6 +5,7 @@ import time
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='PMD TS runner', description='Runner for PMD TS', epilog='')
+    parser.add_argument('file', type=str)
     parser.add_argument('--size', '-s', type=int, default=32)
     parser.add_argument('--horizon', '-t', type=int, default=25)
 
@@ -19,6 +20,8 @@ if __name__ == '__main__':
 
 
     args = parser.parse_args()
+
+    file = args.file
 
     size = args.size
     horizon = args.horizon
@@ -48,7 +51,7 @@ if __name__ == '__main__':
 module load gcc/8.2.0 python/3.10.4
 source cluster-venv/bin/activate
 wandb offline
-python main.py --alg {alg} -n 1 -s {size} -t {horizon} --epochs {epochs} --wandb --group {group} -d {d}
+python {file}.py --alg {alg} -n 1 -s {size} -t {horizon} --epochs {epochs} --wandb --group {group} -d {d}
 """
         
         with open(f'script_{d}_{i}', 'w') as f:
