@@ -1,100 +1,169 @@
 from algorithms.baselines import DPMD, Algorithm
 from algorithms.policies import Policy
-from environments.discrete import Tabular
+from environments.solvable import Tabular
 from collections import defaultdict
 import numpy as np
+from collections import deque
 
 
-class BanditSearch(object):
-    def __init__(self, env: Tabular, pi: Policy, depth: int = 1, alpha: float = 1, horizon: int = 10, n_trajectories: int = 10):
-        self.debug = True
+
+class MCTS(object):
+    def __init__(self, env: Tabular, pi: Policy, max_depth: int = 1, alpha: float = np.sqrt(2), horizon: int = 10) -> None:
         self.env = env
-        factory = lambda: BanditNode(env, alpha)
-
-        self.nodes = {}
-        factory = lambda: Leaf(env, horizon, n_trajectories)
-        self.nodes[depth] = defaultdict(factory)
-
-        for d in reversed(range(d - 1)):
-            factory = lambda: BanditNode(env, alpha, self.nodes[d + 1])
-            self.nodes[d] = defaultdict(factory)
-
-        self.pi = pi
-
-
-    def sample_trajectory(self, state=None):
-        state = state or self.env.state
-        node = self.nodes[(state, 0)]
-        for d in range(self.depth):
-            a = node.explore()
-
-
-
-class BanditNode(object):
-    def __init__(self, env: Tabular, alpha, children=None):
-        self.env = env
-        self.values = np.zeros((env.n_act,)) # TODO REPLACE WITH OPTIMISM
-        
-        self.s = np.zeros_like(self.values)
-        self.t = 0
         self.alpha = alpha
+        
+        factory = lambda: MCTSNode(env, pi, depth=0, alpha=alpha, horizon=horizon, max_depth=max_depth)
+        self.roots = defaultdict(factory)
+
+
+    def sample_trajectory(self, state: int = None):
+        if state is None:
+            state = self.env.state
+        
+        return self.roots[state].explore()
+
+
+class MCTSNode(object):
+    def __init__(self, env: Tabular, pi: Policy, depth: int = 0, alpha: float = np.sqrt(2), horizon: int = 10,
+                 max_depth: int = 1) -> None:
+        self.env = env
+        self.alpha = alpha
+        self.pi = pi
+        self.horizon = horizon
+        self.depth = depth
+        self.max_depth = max_depth
+
+        self.t = 0
+
+        if self.depth + 1 == self.max_depth:
+            factory = lambda: MCTSNode(env, pi, depth + 1, horizon, max_depth)
+        else:
+            factory = lambda: Leaf(env, pi, depth + 1, horizon)
+            
+        self.children = defaultdict(factory)
+        self.s = np.zeros((self.env.n_act, ))
+        self.values = np.zeros_like(self.s)
 
 
     def explore(self):
         self.t += 1
-        bonuses = self.alpha * np.sqrt(np.log(self.t) / self.s)
-        bonuses = np.where(np.isnan(bonuses), np.inf, bonuses)
+        biases = self.alpha * np.sqrt(np.sqrt(self.t) / self.s)
+        biases = np.where(np.isnan(biases), np.inf, biases)
 
-        a = np.argmax(self.values) + bonuses
+        indices = self.values + biases
+        a = np.random.choice(np.flatnonzero(indices == indices.max()))
         self.s[a] += 1
-        s, r, _ = self.env.step(a)
 
-        return a
+        state = self.env.state
+        sp, r, _ = self.env.step(a)
+        V_sp, rtg = self.children[sp].explore()
+        rtg = r + self.env.gamma * rtg
+        m_rtg = r + self.env.gamma * V_sp
+        #self.values[a] += (1 / self.t) * (rtg - self.values[a]) # TODO: EWA or mean? rtg or m_rtg?
+        self.values[a] =  ((self.t - 1) * self.values[a] + rtg) / self.t 
+
+        return self.values.max(), rtg
+
+
+
+
+class BanditTS(object):
+    def __init__(self, env: Tabular, pi: Policy, depth: int = 1, alpha: float = 1, horizon: int = 10):
+        self.env = env
+        self.alpha = alpha
+        
+        self.nodes = {}
+        factory = lambda: Leaf(env, pi, depth, horizon)
+        self.nodes[depth] = defaultdict(factory)
+
+        self.factories = {d: self.factory(d) for d in range(depth)}
+
+        self.depth = depth
+        for d in reversed(range(depth)):
+            self.nodes[d] = defaultdict(self.factories[d])
+
     
-    def value(self):
-        pass
+    def factory(self, d: int):
+        return lambda: BanditNode(self.env, self.alpha, d, self.nodes[d + 1])
+
+
+    def sample_trajectory(self, state=None):
+        if state is None:
+            state, _ = self.env.reset()
+        else:
+            self.env.state = state
+
+        node = self.nodes[0][state]
+        V_max, rtg = node.explore()
+        return V_max, rtg
+
+
+class BanditNode(object):
+    def __init__(self, env: Tabular, alpha: float, depth: int, children: defaultdict, beta=0.1):
+        self.env = env
+        self.values = np.ones((env.n_act,)) / (1 - env.gamma)# TODO REPLACE WITH OPTIMISM
+        self.depth = depth
+        
+        self.s = np.zeros_like(self.values)
+        self.t = 0
+        self.alpha = alpha
+        self.beta = beta
+        self.children = children
+
+
+    def explore(self):
+        self.t += 1
+        biases = self.alpha * np.sqrt(np.sqrt(self.t) / self.s)
+        biases = np.where(np.isnan(biases), np.inf, biases)
+
+        indices = self.values + biases
+        a = np.random.choice(np.flatnonzero(indices == indices.max()))
+        self.s[a] += 1
+
+        state = self.env.state
+        sp, r, _ = self.env.step(a)
+        V_sp, rtg = self.children[sp].explore()
+        rtg = r + self.env.gamma * rtg
+        m_rtg = r + self.env.gamma * V_sp
+        self.values[a] += (1 / self.t) * (rtg - self.values[a]) # TODO: EWA or mean? rtg or m_rtg?
+        #self.values[a] =  ((self.t - 1) * self.values[a] + m_rtg) / self.t 
+
+
+        return self.values.max(), rtg
 
 
 
 class Leaf(object):
-    def __init__(self, env: Tabular, horizon: int, n_trajectories: int):
+    def __init__(self, env: Tabular, pi: Policy, depth: int, horizon: int):
         self.env = env
         self.horizon = horizon
-        self.M_l = n_trajectories
+        self.depth = depth
+        self.pi = pi
+        self.t = 0
+        self.value = 0
 
 
     def explore(self):
         state = self.env.state
+        begin_state = state
+        self.t += 1
 
-        if self.debug:
-            V = self.env.V(self.pi)
-            return V[state]
-        
         V_l = 0
 
-        for _ in range(M_l):
-            for t in range(horizon):
-                a = self.pi.sample(state)
-                r, state, _ = self.env.step(a)
-                V_l += r * self.env.gamma**t
+        for t in range(self.horizon): # TODO maybe reset? 
+            a = self.pi.sample(state)
+            state, r, _ = self.env.step(a)
+            V_l += r * self.env.gamma**t
         
-        V_l /= M_l
-        return V_l
+        self.value = ((self.t - 1) * self.value + V_l) / self.t 
+        
+        return self.value, V_l
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
+"""
 class TSPMD(DPMD):
     def __init__(self, env: Tabular, d=2, horizon=10, n_trajectories=10):
         pi = SoftmaxPolicy(env.n_obs, env.n_act)
@@ -109,3 +178,4 @@ class TSPMD(DPMD):
         pass
 
 
+"""
