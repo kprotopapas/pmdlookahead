@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 import time
 import pandas as pd
 
-from environments.discrete import *
+from environments.solvable import *
 from algorithms.baselines import *
 from helper import random_simplex
 
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     mu = random_simplex((size,))
     
     #env = Tabular(P, R, mu, gamma)
-    #env = Trap(size, 1, gamma)
+    #env = Trap(size, gamma)
     env = Deepsea(size, gamma)
 
 

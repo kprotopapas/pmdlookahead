@@ -1,4 +1,4 @@
-from environments.discrete import Tabular
+from environments.solvable import Tabular
 from algorithms.policies import DirectPolicy, Policy, SoftmaxPolicy
 from scipy.stats import entropy
 
