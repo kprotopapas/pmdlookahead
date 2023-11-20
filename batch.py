@@ -16,7 +16,7 @@ if __name__ == '__main__':
     parser.add_argument('--exact', action='store_true')
     parser.add_argument('-d', type=int, default=1)
 
-    parser.add_argument('--group', type=str)
+    parser.add_argument('--group', type=str, default='delete')
 
 
     args = parser.parse_args()
