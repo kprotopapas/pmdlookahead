@@ -4,7 +4,14 @@ from algorithms.policies import SoftmaxPolicy
 import numpy as np
 from matplotlib import pyplot as plt
 import wandb
+import argparse
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--group', type=str, default='mcts_v1')
+
+args = parser.parse_args()
+group = args.group
 
 size=13
 gamma = 0.9
@@ -36,7 +43,7 @@ errors = []
 n = 1000
 wandb.init(project="pmd-ts", config={'algorithm': 'MCTS', 'env': 'Deepsea',
                                      'size': size, 'depth': depth, 'gamma': gamma},
-                                     group='mcts_v1')
+                                     group=group)
 for _ in range(n):
     tree.sample_trajectory(state=state)
     root = tree.roots[state].values
