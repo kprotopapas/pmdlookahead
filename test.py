@@ -6,16 +6,14 @@ from matplotlib import pyplot as plt
 import wandb
 
 
-size=32
-env = Trap(size, 0.99)
+size=13
+env = Deepsea(size, 0.99)
 pi = SoftmaxPolicy(env.observation_space, env.action_space)
 
 state = size
-depth = size // 2
+depth = size
 tree = MCTS(env, pi, max_depth=depth, alpha=np.sqrt(2))
 
-Q = env.Q(pi)
-Q_opt = env.optimal()
 
 tdm = env.V(pi)
 for i in range(depth - 1):
@@ -34,19 +32,23 @@ sub = best - temp.max()
 
 
 errors = []
-n = 10000
+n = 1000
 for _ in range(n):
     tree.sample_trajectory(state=state)
     root = tree.roots[state].values
-    error = np.max(np.abs(Q_d[state] - root))
+    #root = tree.nodes[0][state].values
+    qdnorm = Q_d[state] - Q_d[state].max()
+    rnorm = root - root.max()
+    error = np.max(np.abs(qdnorm - rnorm))
     errors.append(error)
+    pass
 
 
 # ts = np.array([[tree.nodes[d][i].t for i in range(env.n_obs)] for d in range(depth + 1)])
 # print(ts)
 
 plt.plot(range(n), errors, 'r-')
-#plt.plot(range(n), errors_2, 'b-')
 plt.plot(range(n), np.ones((n, )) * sub, 'k--')
+plt.yscale('log')
 
 plt.show()

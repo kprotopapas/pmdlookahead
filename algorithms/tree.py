@@ -68,18 +68,18 @@ class MCTSNode(object):
 
 
 class BanditTS(object):
-    def __init__(self, env: Tabular, pi: Policy, depth: int = 1, alpha: float = 1, horizon: int = 10):
+    def __init__(self, env: Tabular, pi: Policy, max_depth: int = 1, alpha: float = 1, horizon: int = 10):
         self.env = env
         self.alpha = alpha
         
         self.nodes = {}
-        factory = lambda: Leaf(env, pi, depth, horizon)
-        self.nodes[depth] = defaultdict(factory)
+        factory = lambda: Leaf(env, pi, max_depth, horizon)
+        self.nodes[max_depth] = defaultdict(factory)
 
-        self.factories = {d: self.factory(d) for d in range(depth)}
+        self.factories = {d: self.factory(d) for d in range(max_depth)}
 
-        self.depth = depth
-        for d in reversed(range(depth)):
+        self.max_depth = max_depth
+        for d in reversed(range(max_depth)):
             self.nodes[d] = defaultdict(self.factories[d])
 
     
@@ -101,7 +101,7 @@ class BanditTS(object):
 class BanditNode(object):
     def __init__(self, env: Tabular, alpha: float, depth: int, children: defaultdict, beta=0.1):
         self.env = env
-        self.values = np.ones((env.n_act,)) / (1 - env.gamma)# TODO REPLACE WITH OPTIMISM
+        self.values = np.zeros((env.n_act,)) / (1 - env.gamma)# TODO REPLACE WITH OPTIMISM????
         self.depth = depth
         
         self.s = np.zeros_like(self.values)
@@ -113,7 +113,7 @@ class BanditNode(object):
 
     def explore(self):
         self.t += 1
-        biases = self.alpha * np.sqrt(np.sqrt(self.t) / self.s)
+        biases = self.alpha * np.sqrt(self.t) / self.s # TODO experiment with, sqrt not sqrt, etc...
         biases = np.where(np.isnan(biases), np.inf, biases)
 
         indices = self.values + biases
