@@ -20,7 +20,6 @@ if __name__ == '__main__':
     parser.add_argument('-d', type=int)
 
     parser.add_argument('--wandb', action='store_true')
-    parser.add_argument('--group', type=str)
 
     args = parser.parse_args()
     group = args.group
