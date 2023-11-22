@@ -73,4 +73,4 @@ for k in range(epochs):
     log = {'lr': lr.item(), 'lv': lv.item(), 'samples': env.samples}
 
     wandb.log(log)
-    logging.INFO(f'Episode {k}:\t {log}')
+    logging.info(f'Episode {k}:\t {log}')
