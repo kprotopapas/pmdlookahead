@@ -1,4 +1,5 @@
 import numpy as np
+import argparse
 
 MAX_FOR_EXP = 709
 
@@ -24,5 +25,29 @@ def random_simplex(shape):
     distr = sorted[1:, ...] - sorted[:-1, ...]
     return distr.astype(np.float64)
 
+
 def logsumexp(t, axis=1):
     return np.log(np.sum(np.exp(t), axis=axis))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(prog='PMD TS runner', description='Runner for PMD TS', epilog='')
+    parser.add_argument('--env_name', type=str, default='Gridworld')
+    parser.add_argument('--size', '-s', type=int, default=32)
+    parser.add_argument('--horizon', '-t', type=int, default=25)
+    parser.add_argument('--gamma', '-g', type=float)
+
+    parser.add_argument('--n_agents', '-n', type=int, default=5)
+    parser.add_argument('--alg', '-a', type=str, default='DPQA')
+    parser.add_argument('--epochs', type=int, default=200)
+    parser.add_argument('--lr', '-l', type=float, default=0.1)
+    parser.add_argument('--exact', action='store_true')
+    parser.add_argument('-d', type=int, default=1)
+
+    parser.add_argument('--wandb', action='store_true')
+    parser.add_argument('--group', type=str)
+
+
+    args = parser.parse_args()
+    
+    return args

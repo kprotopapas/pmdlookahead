@@ -4,25 +4,10 @@ from algorithms.policies import SoftmaxPolicy
 import numpy as np
 from matplotlib import pyplot as plt
 import wandb
-import argparse
-
+from helper import parse_args
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--group', type=str, default='mcts_v1')
-    parser.add_argument('--size', '-s', type=int, default=32)
-    parser.add_argument('--horizon', '-t', type=int, default=25)
-    parser.add_argument('--gamma', '-g', type=float)
-
-    parser.add_argument('--alg', '-a', type=str, default='MCTS')
-    parser.add_argument('--epochs', type=int, default=10000)
-    parser.add_argument('--lr', '-l', type=float, default=np.sqrt(2))
-    parser.add_argument('-d', type=int)
-    parser.add_argument('-n', type=int)
-
-    parser.add_argument('--wandb', action='store_true')
-
-    args = parser.parse_args()
+    args = parse_args()
     group = args.group
 
     size = args.size
@@ -35,10 +20,10 @@ if __name__ == '__main__':
 
     gamma = args.gamma or 1 - 1 / horizon
 
-    env = Trap(size, gamma)
+    env = Deepsea(size, gamma)
     pi = SoftmaxPolicy(env.observation_space, env.action_space)
 
-    state = 10
+    state = size**2 - max_depth * size - max_depth
     tree = MCTS(env, pi, max_depth=max_depth, alpha=alpha)
 
 
@@ -59,19 +44,32 @@ if __name__ == '__main__':
 
 
     errors = []
-    wandb.init(project="pmd-ts", config={'algorithm': alg, 'env': 'Trap',
+    rtgs = []
+    old_error = np.inf
+    wandb.init(project="pmd-ts", config={'algorithm': alg, 'env': env.name,
                                         'size': size, 'depth': max_depth, 'gamma': gamma,
                                         'alpha': alpha},
                                         group=group)
     for i in range(n):
-        tree.sample_trajectory(state=state)
+        vmax, rtg = tree.sample_trajectory(state=state)
         root = tree.roots[state].values
         #root = tree.nodes[0][state].values
-        qdnorm = Q_d[state] - Q_d[state].max()
-        rnorm = root - root.max()
-        error = np.max(np.abs(qdnorm - rnorm))
+        qd = Q_d[state]
+        error = np.max(np.abs(qd - root)) / np.max(qd)
         errors.append(error)
-        wandb.log({'err': error})
+        if rtg / i > 1e-2:
+            pass
+        if error - old_error > 1e-3:
+            pass
+        if error < 1e-2:
+            pass
+        old_error = error
+        old_t = tree.roots[state].t
+        old_s = np.copy(tree.roots[state].s)
+        rtgs.append(rtg)
+
+        wandb.log({'err': error, 'rtg': rtg})
+
 
 
     # ts = np.array([[tree.nodes[d][i].t for i in range(env.n_obs)] for d in range(depth + 1)])

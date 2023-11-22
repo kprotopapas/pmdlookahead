@@ -64,11 +64,11 @@ class MCTSNode(object):
         V_sp, rtg = self.children[sp].explore()
         rtg = r + self.env.gamma * rtg
         m_rtg = r + self.env.gamma * V_sp
-        #self.values[a] += (1 / self.t) * (rtg - self.values[a]) # TODO: EWA or mean? rtg or m_rtg?
-        self.values[a] =  ((self.t - 1) * self.values[a] + rtg) / self.t 
+
+        self.values[a] = ((self.t - 1) * self.values[a] + rtg) / self.t # MAX OR RTG
+        #self.values[a] += 0.01 * (rtg - self.values[a]) EWA OR NORMAL AVG?
 
         return self.values.max(), rtg
-
 
 
 
@@ -101,6 +101,7 @@ class BanditTS(object):
         node = self.nodes[0][state]
         V_max, rtg = node.explore()
         return V_max, rtg
+
 
 
 class BanditNode(object):
@@ -162,7 +163,7 @@ class Leaf(object):
         
         self.value = ((self.t - 1) * self.value + V_l) / self.t 
         
-        return self.value, V_l
+        return self.value, self.value # RETURN RTG OR V?
 
 
 

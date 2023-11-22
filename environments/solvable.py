@@ -121,6 +121,24 @@ class Tabular(gym.Env):
         return env
 
 
+    def sample_trajectory(self, pi: Policy, horizon: int):
+        states, actions, rewards = [self.state], [], []
+        for t in range(horizon):
+            a = pi.sample(self.state)
+            sp, r, _ = self.step(a)
+            states.append(sp)
+            actions.append(a)
+            rewards.append(r)
+        
+
+        return states, actions, rewards
+
+
+    def rtg(self, rewards):
+        discounts = self.gamma**np.arange(len(rewards))
+        return np.cumsum((discounts * rewards)[::-1])[::-1].copy()
+
+
 class Trap(Tabular):
     # Defines a Trap environment, where an agent needs to sacrifice immediate reward for large future reward
     # Reward structure looks like: [large, -1, ..., -1, -1, 0, +1, +1, ..., +1, -large] (then normalized to 1)
