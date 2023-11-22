@@ -7,6 +7,10 @@ from planning.vpn import VPN
 from algorithms.policies import SoftmaxPolicy
 from helper import parse_args
 
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+
 args = parse_args()
 
 size = args.size
@@ -66,4 +70,7 @@ for k in range(epochs):
 
     optimizer.step()
 
-    wandb.log({'lr': lr.item(), 'lv': lv.item(), 'samples': env.samples})
+    log = {'lr': lr.item(), 'lv': lv.item(), 'samples': env.samples}
+
+    wandb.log(log)
+    logging.INFO(f'Episode {k}:\t {log}')
