@@ -27,7 +27,7 @@ if __name__ == '__main__':
     pi = SoftmaxPolicy(env.observation_space, env.action_space)
 
     state = 0
-    tree = BanditTS(env, pi, max_depth=max_depth, alpha=alpha, lam=0)
+    tree = BanditTS(env, pi, max_depth=max_depth, alpha=alpha, horizon=horizon, lam=0)
 
 
     tdm = env.V(pi)
@@ -49,9 +49,14 @@ if __name__ == '__main__':
     errors = []
     rtgs = []
     old_error = np.inf
-    wandb.init(project="pmd-ts", config={'algorithm': alg, 'env': env.name,
-                                        'size': size, 'depth': max_depth, 'gamma': gamma,
-                                        'alpha': alpha},
+    wandb.init(project="pmd-ts", config={'algorithm': {'name': alg.__name__,
+                                                       'depth': tree.max_depth,
+                                                       'alpha': tree.alpha,
+                                                       'horizon': tree.horizon,
+                                                       'lambda': tree.lam},
+                                         'env': {'name': env.name, 'size': size, 'gamma': gamma},
+                                         'epochs': epochs
+                                        },
                                         group=group)
     for k in range(epochs):
         vmax, rtg = tree.sample_trajectory(state=state)
@@ -60,7 +65,7 @@ if __name__ == '__main__':
         error = np.max(np.abs(qd - root))
         errors.append(error)
         
-        log = {'err': error, 'rtg': rtg}
+        log = {'err': error, 'rtg': rtg, 'samples': env.samples}
         wandb.log(log)
         logging.info(f'Epoch: {k}, {log}')
 
