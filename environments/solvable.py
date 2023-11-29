@@ -161,9 +161,8 @@ class Trap(Tabular):
 
         self.values = np.zeros((size,))
         self.values[0] = 1
-        self.values[-1] = -1
         self.values[1:length] = -factor
-        self.values[length + 1:-1] = factor
+        self.values[length + 1:] = factor
 
         R = np.zeros((size, n_actions))
         R[1:, 0] = self.values[:-1]
@@ -292,6 +291,79 @@ class Deepsea(Tabular):
     def __str__(self):
         grid_str = self.grid.astype('str')
         y, x = np.argwhere(self.grid == self.state)[0]
+        grid_str[y, x] = '#'
+
+        grid_str[-1, -1] = 'X'
+
+        return str(grid_str)
+    
+
+class Cliffwalk(Tabular):
+    # Cliffwalk environment from Sutton & Barto: Reinforcement Learning, an Introduction
+    def __init__(self, width: int, gamma: float, height: int = 4):
+        self.width = width
+        self.height = height
+
+        n_obs = width * height
+        n_act = 4
+        self.grid = np.arange(n_obs).reshape((height, width))
+        self.start = self.grid[0, 0]
+        self.target = self.grid[0, -1]
+
+        mu = 1 * (np.arange(n_obs) == self.start)
+
+        P = np.zeros((n_obs, n_obs, n_act))
+        R = - np.ones((n_obs, n_act))
+        for s in range(n_obs):
+            for a in range(n_act):
+                sp, fall = self.transition(s, a)
+                P[sp, s, a] = 1
+                y, x = np.argwhere(self.grid == sp)[0]
+                if fall:
+                    R[s, a] = -100
+        
+        
+        P[:, self.target, :] = 1 * (np.arange(n_obs) == self.target)[..., np.newaxis] # target is absorbing
+        R[self.target, :] = 0
+        
+        R = R / np.max(np.abs(R))
+
+        name = f'Cliffwalk-{self.width}x{self.height}'
+
+        super().__init__(P, R, mu, gamma, name=name)
+
+
+    def transition(self, state, action):
+        fb, vh = action % 2, action // 2
+        amt = 2 * fb - 1
+        v = vh * amt
+        h = (1 - vh) * amt
+
+        y, x = np.argwhere(self.grid == state)[0]
+        new_y = min(self.height - 1, max(y + v, 0))
+        new_x = min(self.width - 1, max(x + h, 0))
+
+        if new_y == 0 and new_x > 0 and new_x < self.width - 1:
+            return self.start, True
+        
+        return self.grid[new_y, new_x], False
+    
+
+    def step(self, action):
+        state, action, info = super().step(action)
+        info['terminal'] = state == self.target
+        return state, action, info
+    
+
+    def __str__(self):
+        grid_str = self.grid.astype('str')
+        y, x = np.argwhere(self.grid == self.target)[0]
         grid_str[y, x] = 'X'
+
+        grid_str[0, 1:-1] = '^'
+
+        y, x = np.argwhere(self.grid == self.state)[0]
+        grid_str[y, x] = '#'
+
 
         return str(grid_str)

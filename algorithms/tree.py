@@ -3,7 +3,6 @@ from algorithms.policies import Policy
 from environments.solvable import Tabular
 from collections import defaultdict
 import numpy as np
-from collections import deque
 
 
 
@@ -73,52 +72,89 @@ class MCTSNode(object):
 
 
 class BanditTS(object):
-    def __init__(self, env: Tabular, pi: Policy, max_depth: int = 1, alpha: float = 1, horizon: int = 10):
+    def __init__(self, env: Tabular, pi: Policy, max_depth: int = 1,
+                 alpha: float = np.sqrt(2), horizon: int = 10, lam: float = 0):
         self.env = env
         self.alpha = alpha
-        
-        self.nodes = {}
-        factory = lambda: Leaf(env, pi, max_depth, horizon)
-        self.nodes[max_depth] = defaultdict(factory)
-
-        self.factories = {d: self.factory(d) for d in range(max_depth)}
-
         self.max_depth = max_depth
-        for d in reversed(range(max_depth)):
-            self.nodes[d] = defaultdict(self.factories[d])
+        self.horizon = horizon
+        self.pi = pi
+        self.lam = lam
 
-    
-    def factory(self, d: int):
-        return lambda: BanditNode(self.env, self.alpha, d, self.nodes[d + 1])
+        factory = lambda: BanditNode(env, alpha, max_depth, pi)
+        self.nodes = defaultdict(factory)
+
+        factory_leaves = lambda: Leaf(env, pi, max_depth, horizon)
+        self.leaves = defaultdict(factory_leaves)
 
 
     def sample_trajectory(self, state=None):
+        pi = self.pi
+        env = self.env
+        tree = self
         if state is None:
             state, _ = self.env.reset()
         else:
             self.env.state = state
 
-        node = self.nodes[0][state]
-        V_max, rtg = node.explore()
-        return V_max, rtg
+        states, actions, rewards = [state], [], []
+        
+        for d in range(self.max_depth - 1):
+            node = self.nodes[state]
+            node.t += 1
+            
+            # 1 uniform action then d - 1 optimal actions
+            a = np.random.choice(env.n_act) if d == 0 else node.select_action()
+            sp, r, _ = self.env.step(a)
+
+            states.append(sp)
+            actions.append(a)
+            rewards.append(r)
+
+            state = sp
+        
+        
+        rtg = self.env.rtg(rewards)
+        leaf = self.leaves[state]
+        val, v = leaf.explore()
+
+        if actions[0] == 0:
+            pass
+
+        delta = 0
+        tds = []
+        for t, (s, sp, a, r) in enumerate(list(zip(states[:-1], states[1:], actions, rewards))[::-1]):
+            t = self.max_depth - t - 1
+            npp = leaf if t == self.max_depth - 1 else self.nodes[sp]
+            n = self.nodes[s]
+            
+            td = r + self.env.gamma * npp.value - n.values[a] # npp.value or rtg?
+
+            delta = self.env.gamma * self.lam * delta + td
+
+            stepsize = 1 / n.t
+            tds.append(td)
+            if t == 0:
+                pass
+            n.values[a] += stepsize * delta
+
+        return delta, rtg[0]
 
 
 
 class BanditNode(object):
-    def __init__(self, env: Tabular, alpha: float, depth: int, children: defaultdict, beta=0.1):
+    def __init__(self, env: Tabular, alpha: float, max_depth: int, pi: Policy):
         self.env = env
-        self.values = np.zeros((env.n_act,)) / (1 - env.gamma)# TODO REPLACE WITH OPTIMISM????
-        self.depth = depth
+        self.values = np.zeros((env.n_act,))
+        self.max_depth = max_depth
+        self.pi = pi
         
         self.s = np.zeros_like(self.values)
         self.t = 0
         self.alpha = alpha
-        self.beta = beta
-        self.children = children
 
 
-    def explore(self):
-        self.t += 1
+    def select_action(self):
         biases = self.alpha * np.sqrt(self.t) / self.s # TODO experiment with, sqrt not sqrt, etc...
         biases = np.where(np.isnan(biases), np.inf, biases)
 
@@ -126,16 +162,12 @@ class BanditNode(object):
         a = np.random.choice(np.flatnonzero(indices == indices.max()))
         self.s[a] += 1
 
-        state = self.env.state
-        sp, r, _ = self.env.step(a)
-        V_sp, rtg = self.children[sp].explore()
-        rtg = r + self.env.gamma * rtg
-        m_rtg = r + self.env.gamma * V_sp
-        self.values[a] += (1 / self.t) * (rtg - self.values[a]) # TODO: EWA or mean? rtg or m_rtg?
-        #self.values[a] =  ((self.t - 1) * self.values[a] + m_rtg) / self.t 
-
-
-        return self.values.max(), rtg
+        return a
+    
+    
+    @property
+    def value(self):
+        return np.max(self.values)
 
 
 
@@ -146,7 +178,7 @@ class Leaf(object):
         self.depth = depth
         self.pi = pi
         self.t = 0
-        self.value = 0
+        self.val = 0
 
 
     def explore(self):
@@ -161,12 +193,14 @@ class Leaf(object):
             state, r, _ = self.env.step(a)
             V_l += r * self.env.gamma**t
         
-        self.value = ((self.t - 1) * self.value + V_l) / self.t 
+        self.val = ((self.t - 1) * self.val + V_l) / self.t 
         
-        return self.value, self.value # RETURN RTG OR V?
+        return self.val, self.val # RETURN RTG OR V?
 
 
-
+    @property
+    def value(self):
+        return self.val
 
 
 """
