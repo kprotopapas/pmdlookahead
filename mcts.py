@@ -27,7 +27,7 @@ if __name__ == '__main__':
     pi = SoftmaxPolicy(env.observation_space, env.action_space)
 
     state = 0
-    tree = BanditTS(env, pi, max_depth=max_depth, alpha=alpha, horizon=horizon, lam=0)
+    tree = BanditTS(env, pi, max_depth=max_depth, alpha=np.sqrt(2), horizon=horizon, lam=0)
 
 
     tdm = env.V(pi)

@@ -117,10 +117,7 @@ class BanditTS(object):
         rtg = self.env.rtg(rewards)
         leaf = self.leaves[state]
         val, v = leaf.explore()
-
-        if actions[0] == 0:
-            pass
-
+        
         delta = 0
         tds = []
         for t, (s, sp, a, r) in enumerate(list(zip(states[:-1], states[1:], actions, rewards))[::-1]):
