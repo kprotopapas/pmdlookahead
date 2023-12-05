@@ -13,6 +13,9 @@ class VPN(torch.nn.Module):
         self.latent = Sequential(Linear(d_z + 1, hidden, bias=False), ReLU(),
                                  Linear(hidden, hidden, bias=False), ReLU())
         
+        self.latent2 = Sequential(Linear(d_z + 1, hidden, bias=False), ReLU(),
+                                 Linear(hidden, hidden, bias=False), ReLU())
+        
          # (z, a) -> zp
         self.gt = Sequential(self.latent,
                              Linear(hidden, d_z))

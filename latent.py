@@ -38,7 +38,7 @@ loss_z = MSELoss()
 loss_r = MSELoss()
 loss_v = MSELoss()
 
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
 wandb.init(project='pmd-ts',
            config={'environment': {'name': env.name, 'gamma': env.gamma},
@@ -46,9 +46,6 @@ wandb.init(project='pmd-ts',
 
 
 for k in range(epochs):
-    lz = torch.tensor(0.).double()
-    lr = torch.tensor(0.).double()
-    
     optimizer.zero_grad()
 
     states, actions, rewards = env.sample_trajectory(pi, horizon)
@@ -63,6 +60,9 @@ for k in range(epochs):
 
     lr = loss_r(rkh, rk)
     lv = loss_v(vkh, vk)
+
+    if lr.item() > 10:
+        pass
 
     loss = lr + lv
     
