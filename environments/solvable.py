@@ -259,7 +259,7 @@ class Deepsea(Tabular):
 
         P = np.zeros((n_obs, n_obs, n_act))
         R = np.zeros((n_obs, n_act))
-        R[:, 1] = -0.1 * gamma**size
+        R[:, 1] = -0.1 * gamma**size / size
 
         for s in range(n_obs):
             for a in range(n_act):

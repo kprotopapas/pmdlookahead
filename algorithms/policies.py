@@ -3,7 +3,6 @@ import numpy as np
 from helper import *
 
 
-
 class Policy:
     def sample(self, state):
         raise NotImplementedError
