@@ -39,7 +39,9 @@ class JDeepsea(JEnv):
         action = jnp.clip(action, 0, 1)
         dx = jnp.where(env.done, 0, action * 2 - 1)
 
-        newpos = jnp.clip(jnp.array([position[0] + 1, position[1] + dx]), 0, env.size - 1)
+        temp = jnp.array([position[0] + 1, position[1] + dx])
+
+        newpos = jnp.clip(temp, 0, env.size - 1)
         done = newpos[0] == env.size - 1
         right_penalty = -0.1 * env.gamma**env.size / env.size
 

@@ -6,10 +6,14 @@ from environments.solvable import *
 size = 32
 depth = 3
 gamma = 0.99
-env = Trap(size, gamma)
-jenv = JTrap(size=size, gamma=gamma)
+env = Deepsea(size, gamma)
+jenv = JDeepsea(size=size, gamma=gamma)
 embedding = lambda state: state
 
+
+for i in range(size - depth - 3):
+    env.step(1)
+    jenv, _, _ = jenv.step(1)
 
 
 jpolicy = JSoftmaxPolicy(env.n_obs, env.n_act, embedding)
@@ -23,6 +27,8 @@ right, rright, _ = jenv.step(1)
 left, rleft, _ = jenv.step(0)
 
 key = jax.random.PRNGKey(42)
+
+test = rollout(jenv, key, jpolicy)
 
 
 vright = value_function(right, key, jpolicy)
