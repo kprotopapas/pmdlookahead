@@ -18,7 +18,6 @@ class JEnv(object):
     done: Done = jnp.bool_(False)
     reward: Reward = jnp.float32(0)
     t: int = 0
-    n_states: int = -1
 
 
     def step(self, action: Action) -> tuple[JEnv, Reward, Done]:
@@ -33,10 +32,6 @@ class JDeepsea(JEnv):
     size: int
     state: State = jnp.zeros((2, ), dtype=jnp.int32)
     n_actions: int = 2
-
-    def __post__init__(self):
-        self.n_states = self.size**2
-
 
     def step(self, action: Action) -> tuple[JEnv, Reward, Done]:
         env = self
@@ -86,7 +81,6 @@ class JTrap(JEnv):
         ])
 
         self.length = 2 * self.size + 1
-        self.n_states = self.length
 
 
     def step(self, action: Action) -> tuple[JEnv, Reward, Done]:
@@ -127,8 +121,7 @@ class JPolicy(object):
 
 
 class JSoftmaxPolicy(JPolicy): # softmax policy
-    def __init__(self, env: JEnv, embedding = lambda x: x):
-        n_states, n_act = env.n_states, env.n_actions
+    def __init__(self, n_states: int, n_act: int, embedding = lambda x: x):
         self.embedding = embedding
         self.logits = jnp.zeros((n_states, n_act), dtype=jnp.float32)
 
