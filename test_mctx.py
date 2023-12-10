@@ -30,7 +30,12 @@ def rollout(env: JEnv, rng_key: chex.PRNGKey) -> Reward:
 
 
 def value_function(env: JEnv, rng_key: chex.PRNGKey) -> chex.Array:
-    return JV[embedding(env.state)]
+    #return JV[embedding(env.state)]
+
+    keys = jax.random.split(key, 1024)
+    rolls = jax.vmap(rollout, (None, 0))(env, keys)
+    return jnp.mean(rolls)
+
     return rollout(env, rng_key).astype(jnp.float32)
 
 
@@ -137,5 +142,5 @@ print(Q_d[env.state])
 print(Q_hat)
 
 error = jnp.linalg.norm(Q_d[env.state] - Q_hat, ord=jnp.inf)
-print(f'Error: {error}')
+print(f'Error: {error / np.max(np.abs(Q_d[env.state]))}')
 pass
