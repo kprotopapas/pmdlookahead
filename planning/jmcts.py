@@ -38,9 +38,7 @@ def rollout(env: JEnv, rng_key: chex.PRNGKey, policy: JPolicy) -> Reward:
     return leaf.reward - reward_so_far
 
 
-def value_function(env: JEnv, rng_key: chex.PRNGKey, policy: JPolicy = None) -> chex.Array:
-    if policy is None:
-        policy = JSoftmaxPolicy(env)
+def value_function(env: JEnv, rng_key: chex.PRNGKey, policy: JPolicy) -> chex.Array:
     return rollout(env, rng_key, policy).astype(jnp.float32)
 
 

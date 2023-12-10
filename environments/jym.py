@@ -18,8 +18,6 @@ class JEnv(object):
     done: Done = jnp.bool_(False)
     reward: Reward = jnp.float32(0)
     t: int = 0
-    n_states: int = -1
-
 
     def step(self, action: Action) -> tuple[JEnv, Reward, Done]:
         pass
@@ -33,9 +31,6 @@ class JDeepsea(JEnv):
     size: int
     state: State = jnp.zeros((2, ), dtype=jnp.int32)
     n_actions: int = 2
-
-    def __post__init__(self):
-        self.n_states = self.size**2
 
 
     def step(self, action: Action) -> tuple[JEnv, Reward, Done]:
@@ -79,14 +74,22 @@ class JTrap(JEnv):
     state: State = 0
     n_actions: int = 2
 
-    def __post_init__(self):
-        self.reward_matrix: chex.Array = jnp.hstack([
-            jnp.array([1], dtype=jnp.float32),
-            jnp.ones((self.size - 1, ), dtype=jnp.float32) * self.gamma**self.size / self.size
+    def reward_matrix(self):
+        end = jnp.array([1], dtype=jnp.float32)
+        multiplier = self.gamma**self.size / self.size
+        ones = jnp.ones((self.size - 1), dtype=jnp.float32)
+        penalty = ones * multiplier
+        middle = jnp.array([0], dtype=jnp.float32)
+
+        reward_matrix: chex.Array = jnp.hstack([
+            end,
+            -penalty,
+            middle,
+            penalty,
+            end
         ])
 
-        self.length = 2 * self.size + 1
-        self.n_states = self.length
+        return reward_matrix
 
 
     def step(self, action: Action) -> tuple[JEnv, Reward, Done]:
@@ -96,8 +99,9 @@ class JTrap(JEnv):
         dx = jnp.where(env.done, 0, action * 2 - 1)
 
         newpos = jnp.clip(env.state + dx, -self.size, self.size)
-        done = position == 0 or position == self.length - 1 or self.done
-        reward = jnp.where(done, 0, self.reward_matrix[newpos + self.size])
+        length = 2 * self.size + 1
+        done = position == 0 or position == length - 1 or self.done
+        reward = jnp.where(done, 0, self.reward_matrix()[newpos + self.size])
         cumulative = env.reward + self.gamma**self.t * reward
         self.t += 1
 
@@ -127,8 +131,7 @@ class JPolicy(object):
 
 
 class JSoftmaxPolicy(JPolicy): # softmax policy
-    def __init__(self, env: JEnv, embedding = lambda x: x):
-        n_states, n_act = env.n_states, env.n_actions
+    def __init__(self, n_states: int, n_act: int, embedding = lambda x: x):
         self.embedding = embedding
         self.logits = jnp.zeros((n_states, n_act), dtype=jnp.float32)
 

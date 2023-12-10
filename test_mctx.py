@@ -8,14 +8,15 @@ depth = 3
 gamma = 0.99
 env = Trap(size, gamma)
 jenv = JTrap(size=size, gamma=gamma)
+embedding = lambda state: state
+
 
 for i in range(size - depth - 3):
     jenv, _, _ = jenv.step(1)
     env.step(1)
 
 
-embedding = lambda state: state[0] * size + state[1]
-jpolicy = JSoftmaxPolicy(jenv, embedding)
+jpolicy = JSoftmaxPolicy(env.n_obs, env.n_act, embedding)
 policy = SoftmaxPolicy(env.observation_space, env.action_space)
 
 Q = env.Q(policy)
@@ -27,8 +28,9 @@ left, rleft, _ = jenv.step(0)
 
 key = jax.random.PRNGKey(42)
 
-vright = value_function(right, key)
-vleft = value_function(left, key)
+
+vright = value_function(right, key, jpolicy)
+vleft = value_function(left, key, jpolicy)
 
 
 print('State')
