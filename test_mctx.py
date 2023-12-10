@@ -11,10 +11,6 @@ jenv = JTrap(size=size, gamma=gamma)
 embedding = lambda state: state
 
 
-for i in range(size - depth - 3):
-    jenv, _, _ = jenv.step(1)
-    env.step(1)
-
 
 jpolicy = JSoftmaxPolicy(env.n_obs, env.n_act, embedding)
 policy = SoftmaxPolicy(env.observation_space, env.action_space)

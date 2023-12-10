@@ -93,23 +93,22 @@ class JTrap(JEnv):
 
 
     def step(self, action: Action) -> tuple[JEnv, Reward, Done]:
-        env = self
-        position = env.state
+        position = self.state
         action = jnp.clip(action, 0, 1)
-        dx = jnp.where(env.done, 0, action * 2 - 1)
+        dx = jnp.where(self.done, 0, action * 2 - 1)
 
-        newpos = jnp.clip(env.state + dx, -self.size, self.size)
+        newpos = jnp.clip(self.state + dx, -self.size, self.size)
         length = 2 * self.size + 1
-        done = position == 0 or position == length - 1 or self.done
+        done = (position == 0) | (position == length - 1) | self.done
         reward = jnp.where(done, 0, self.reward_matrix()[newpos + self.size])
-        cumulative = env.reward + self.gamma**self.t * reward
+        cumulative = self.reward + self.gamma**self.t * reward
         self.t += 1
 
 
         return JTrap(state=newpos,
                         reward=cumulative,
                         done=done,
-                        size=env.size,
+                        size=self.size,
                         gamma=self.gamma), reward, done
     
     
