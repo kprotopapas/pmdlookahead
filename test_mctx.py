@@ -75,7 +75,7 @@ def run_mcts(rng_key: chex.PRNGKey, env: JEnv, depth: int, num_simulations: int)
 
     rf = jax.vmap(recurrent_fn, (None, None, 0, 0))
     policy_output = mctx.muzero_policy(
-        params=policy,
+        params=None,
         rng_key=key1,
         root=root,
         recurrent_fn=rf,
