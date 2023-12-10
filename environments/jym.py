@@ -10,66 +10,128 @@ Reward = chex.Array
 Done = chex.Array
 Action = chex.Array
 
-@chex.dataclass
-class Env(object):
+@chex.dataclass(kw_only=True)
+class JEnv(object):
     state: State
     n_actions: int
     gamma: float
     done: Done = jnp.bool_(False)
     reward: Reward = jnp.float32(0)
+    t: int = 0
+    n_states: int = -1
 
-    def step(self, action: Action) -> tuple[Env, Reward, Done]:
+
+    def step(self, action: Action) -> tuple[JEnv, Reward, Done]:
         pass
     
-    def reset(self, _ = None) -> Env:
+    def reset(self, _ = None) -> JEnv:
         pass
 
 
 @chex.dataclass(kw_only=True)
-class DeepseaX(Env):
+class JDeepsea(JEnv):
     size: int
-    state: State = jnp.zeros((2, ), dtype=jnp.int16)
+    state: State = jnp.zeros((2, ), dtype=jnp.int32)
     n_actions: int = 2
 
+    def __post__init__(self):
+        self.n_states = self.size**2
 
-    def step(self, action: Action) -> tuple[Env, Reward, Done]:
+
+    def step(self, action: Action) -> tuple[JEnv, Reward, Done]:
         env = self
         position = env.state
         action = jnp.clip(action, 0, 1)
         dx = jnp.where(env.done, 0, action * 2 - 1)
+
         newpos = jnp.clip(jnp.array([position[0] + 1, position[1] + dx]), 0, env.size - 1)
         done = newpos[0] == env.size - 1
-        right_reward = -0.1 * env.gamma**env.size / env.size
-        reward = action * jnp.where(newpos[1] == env.size - 1, 1, right_reward)
-        reward = jnp.where(env.done, 0, reward)
+        right_penalty = -0.1 * env.gamma**env.size / env.size
 
-        return DeepseaX(state=newpos,
-                        reward=reward + env.reward,
+        reward = action * jnp.where(newpos[1] == env.size - 1, 1, right_penalty)
+        reward = jnp.where(env.done, 0, reward)
+        cumulative = env.reward + reward * self.gamma**self.t
+        self.t += 1
+
+        return JDeepsea(state=newpos,
+                        reward=cumulative,
                         done=done,
                         size=env.size,
                         gamma=self.gamma), reward, done
     
     
+    
     def reset(self, _ = None):
-        return DeepseaX(size = self.size, gamma = self.gamma)
+        return JDeepsea(size = self.size, gamma = self.gamma)
     
 
     def __str__(self):
         env = self
         grid = np.arange(env.size**2).reshape((env.size, env.size)).astype(str)
         grid[env.state[0], env.state[1]] = '#'
+        grid[-1, -1] = 'X'
         return str(grid)
 
 
-class Policy(object):
+@chex.dataclass(kw_only=True)
+class JTrap(JEnv):
+    size: int
+    state: State = 0
+    n_actions: int = 2
+
+    def __post_init__(self):
+        self.reward_matrix: chex.Array = jnp.hstack([
+            jnp.array([1], dtype=jnp.float32),
+            jnp.ones((self.size - 1, ), dtype=jnp.float32) * self.gamma**self.size / self.size
+        ])
+
+        self.length = 2 * self.size + 1
+        self.n_states = self.length
+
+
+    def step(self, action: Action) -> tuple[JEnv, Reward, Done]:
+        env = self
+        position = env.state
+        action = jnp.clip(action, 0, 1)
+        dx = jnp.where(env.done, 0, action * 2 - 1)
+
+        newpos = jnp.clip(env.state + dx, -self.size, self.size)
+        done = position == 0 or position == self.length - 1 or self.done
+        reward = jnp.where(done, 0, self.reward_matrix[newpos + self.size])
+        cumulative = env.reward + self.gamma**self.t * reward
+        self.t += 1
+
+
+        return JTrap(state=newpos,
+                        reward=cumulative,
+                        done=done,
+                        size=env.size,
+                        gamma=self.gamma), reward, done
+    
+    
+    def reset(self, _ = None):
+        return JTrap(size = self.size, gamma = self.gamma)
+    
+
+    def __str__(self):
+        env = self
+        board = np.array(self.reward_matrix).astype(str)
+        board[env.state] = '#'
+        return str(board)
+
+
+class JPolicy(object):
     # Returns logits associated with current 
-    def act(self, env: Env) -> chex.Array:
+    def act(self, env: JEnv) -> chex.Array:
         pass
 
 
+class JSoftmaxPolicy(JPolicy): # softmax policy
+    def __init__(self, env: JEnv, embedding = lambda x: x):
+        n_states, n_act = env.n_states, env.n_actions
+        self.embedding = embedding
+        self.logits = jnp.zeros((n_states, n_act), dtype=jnp.float32)
 
-class SoftmaxPolicy(object): # softmax policy
-    def __init__(self, embedding = lambda x: x):
-
-
-    def act(self, env: Env) -> chex.Array:
+    def act(self, env: JEnv) -> chex.Array:
+        state = self.embedding(env.state)
+        return self.logits[state]

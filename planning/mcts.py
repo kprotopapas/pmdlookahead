@@ -4,8 +4,6 @@ from environments.solvable import Tabular
 from collections import defaultdict
 import numpy as np
 
-
-
 class MCTS(object):
     def __init__(self, env: Tabular, pi: Policy, max_depth: int = 1, alpha: float = np.sqrt(2), horizon: int = 10) -> None:
         self.env = env

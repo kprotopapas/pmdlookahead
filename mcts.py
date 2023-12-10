@@ -1,5 +1,5 @@
 from environments.solvable import *
-from algorithms.tree import BanditTS, MCTS
+from planning.mcts import BanditTS, MCTS
 from algorithms.policies import SoftmaxPolicy
 import numpy as np
 from matplotlib import pyplot as plt
