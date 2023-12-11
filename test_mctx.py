@@ -1,11 +1,18 @@
 import jax
 from jax import numpy as jnp
+import numpy as np
 import time
 
 from environments.jym import *
 from environments.solvable import *
 from algorithms.policies import *
 from planning.jmcts import *
+from helper import *
+
+import wandb
+
+args = parse_args()
+group = args.group
 
 
 size = 32
@@ -32,8 +39,9 @@ left, rleft, _ = jenv.step(0)
 
 key = jax.random.PRNGKey(42)
 
-vright = value_function(128, right, key, jpolicy)
-vleft = value_function(128, left, key, jpolicy)
+M_l = 128
+vright = value_function(M_l, right, key, jpolicy)
+vleft = value_function(M_l, left, key, jpolicy)
 
 
 print('State')
@@ -51,18 +59,37 @@ gamma = env.gamma
 next_V = np.sum(env.P * tdm[..., np.newaxis, np.newaxis], axis=0)
 Q_d = env.R + gamma * next_V
 
-start = time.time()
-N = 1000
-lookahead: PolicyOutput = run_mcts(key, jenv, depth, jpolicy, N, 128)
-Q_hat = lookahead.search_tree.children_values[0, 0]
-print('Real vs approx Q_d function')
-print(Q_d[env.state])
-print(Q_hat)
+N = 5000
+config = {'alg': 'MCTX',
+          'epochs': N,
+          'depth': depth,
+          'policy': 'uniform',
+          'M_l': M_l}
 
-error = jnp.linalg.norm(Q_d[env.state] - Q_hat, ord=jnp.inf)
-print(f'Error: {error / np.max(np.abs(Q_d[env.state]))}')
+run = wandb.init(project="pmd-ts", config=config, group=group)
 
-print(f'Took {time.time() - start} seconds')
+
+
+for vals in np.linspace(100, N, 100, dtype=np.int32):
+    start = time.time()
+    print(f'Running with {vals} simulations')
+    lookahead: PolicyOutput = run_mcts(key, jenv, depth, jpolicy, vals, M_l)
+    Q_hat = lookahead.search_tree.children_values[0, 0]
+    print('Real vs approx Q_d function')
+    print(Q_d[env.state])
+    print(Q_hat)
+
+    error = jnp.linalg.norm(Q_d[env.state] - Q_hat, ord=jnp.inf)
+    print(f'Error: {error / np.max(np.abs(Q_d[env.state]))}')
+
+    runtime = time.time() - start
+    print(f'Took {runtime} seconds')
+
+    out_log = {'num_simulations': vals,
+               'error': error,
+               'runtime': runtime}
+    
+    wandb.log(out_log)
 
 
 # TODO SUBTREEEEEEEES
