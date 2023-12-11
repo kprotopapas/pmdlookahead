@@ -1,5 +1,6 @@
 import jax
 from jax import numpy as jnp
+import time
 
 from environments.jym import *
 from environments.solvable import *
@@ -31,8 +32,8 @@ left, rleft, _ = jenv.step(0)
 
 key = jax.random.PRNGKey(42)
 
-vright = value_function(right, key, jpolicy)
-vleft = value_function(left, key, jpolicy)
+vright = value_function(128, right, key, jpolicy)
+vleft = value_function(128, left, key, jpolicy)
 
 
 print('State')
@@ -50,8 +51,9 @@ gamma = env.gamma
 next_V = np.sum(env.P * tdm[..., np.newaxis, np.newaxis], axis=0)
 Q_d = env.R + gamma * next_V
 
-
-lookahead: PolicyOutput = run_mcts(key, jenv, depth, jpolicy, 10000)
+start = time.time()
+N = 1000
+lookahead: PolicyOutput = run_mcts(key, jenv, depth, jpolicy, N, 128)
 Q_hat = lookahead.search_tree.children_values[0, 0]
 print('Real vs approx Q_d function')
 print(Q_d[env.state])
@@ -59,4 +61,8 @@ print(Q_hat)
 
 error = jnp.linalg.norm(Q_d[env.state] - Q_hat, ord=jnp.inf)
 print(f'Error: {error / np.max(np.abs(Q_d[env.state]))}')
-pass
+
+print(f'Took {time.time() - start} seconds')
+
+
+# TODO SUBTREEEEEEEES
