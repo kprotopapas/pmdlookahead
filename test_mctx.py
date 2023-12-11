@@ -13,6 +13,8 @@ import wandb
 
 args = parse_args()
 group = args.group
+depth = args.d
+N = args.epochs
 
 
 size = 32
@@ -59,7 +61,6 @@ gamma = env.gamma
 next_V = np.sum(env.P * tdm[..., np.newaxis, np.newaxis], axis=0)
 Q_d = env.R + gamma * next_V
 
-N = 5000
 config = {'alg': 'MCTX',
           'epochs': N,
           'depth': depth,
