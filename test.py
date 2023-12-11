@@ -1,83 +1,79 @@
-from environments.solvable import Trap, Deepsea
-from algorithms.tree import BanditTS, MCTS
-from algorithms.policies import SoftmaxPolicy
+import jax
+from jax import numpy as jnp
 import numpy as np
-from matplotlib import pyplot as plt
+import time
+
+from environments.jym import *
+from environments.solvable import *
+from algorithms.policies import *
+from planning.jmcts import *
+from helper import *
+
 import wandb
-from helper import parse_args
 
-if __name__ == '__main__':
-    args = parse_args()
-    group = args.group
-
-    size = args.size
-    alg = BanditTS if args.alg.upper() == 'BANDITTS' else MCTS
-    use_wandb = args.wandb
-    alpha = args.lr
-    max_depth = args.d or size
-    n = args.epochs
-    horizon = args.horizon
-
-    gamma = args.gamma or 1 - 1 / horizon
-
-    env = Deepsea(size, gamma)
-    pi = SoftmaxPolicy(env.observation_space, env.action_space)
-
-    state = size**2 - max_depth * size - max_depth
-    tree = MCTS(env, pi, max_depth=max_depth, alpha=alpha)
+args = parse_args()
+group = args.group
+depth = args.d
+N = args.epochs
 
 
-    tdm = env.V(pi)
-    for i in range(max_depth - 1):
-        tdm = env.bellman(tdm)
+size = 32
+depth = 7
+gamma = 0.99
+env = Deepsea(size, gamma)
+jenv = JDeepsea(size=size, gamma=gamma)
 
-    next_V = np.sum(env.P * tdm[..., np.newaxis, np.newaxis], axis=0)
-    Q_d = env.R + env.gamma * next_V
-
-    best = np.max(Q_d[state])
-    temp = np.copy(Q_d[state])
-
-    i = np.argmax(Q_d[state])
-    temp[i] = -np.inf
-
-    sub = best - temp.max()
+for i in range(size - depth - 3):
+    jenv, _, _ = jenv.step(1)
+    env.step(1)
 
 
-    errors = []
-    rtgs = []
-    old_error = np.inf
-    wandb.init(project="pmd-ts", config={'algorithm': alg, 'env': env.name,
-                                        'size': size, 'depth': max_depth, 'gamma': gamma,
-                                        'alpha': alpha},
-                                        group=group)
-    for i in range(n):
-        vmax, rtg = tree.sample_trajectory(state=state)
-        root = tree.roots[state].values
-        #root = tree.nodes[0][state].values
-        qd = Q_d[state]
-        error = np.max(np.abs(qd - root)) / np.max(qd)
-        errors.append(error)
-        if rtg / i > 1e-2:
-            pass
-        if error - old_error > 1e-3:
-            pass
-        if error < 1e-2:
-            pass
-        old_error = error
-        old_t = tree.roots[state].t
-        old_s = np.copy(tree.roots[state].s)
-        rtgs.append(rtg)
+embedding = lambda state: state[0] * size + state[1]
+jpolicy = JSoftmaxPolicy(env.n_obs, env.n_act, embedding)
+policy = SoftmaxPolicy(env.observation_space, env.action_space)
 
-        wandb.log({'err': error, 'rtg': rtg})
+Q = env.Q(policy)
+V = env.V(policy)
+JV = jnp.array(V)
+
+right, rright, _ = jenv.step(1)
+left, rleft, _ = jenv.step(0)
+
+key = jax.random.PRNGKey(42)
+
+M_l = 128
+vright = value_function(M_l, right, key, jpolicy)
+vleft = value_function(M_l, left, key, jpolicy)
 
 
+print('State')
+print(jenv.state)
 
-    # ts = np.array([[tree.nodes[d][i].t for i in range(env.n_obs)] for d in range(depth + 1)])
-    # print(ts)
+print('Real vs approx Q function')
+print(Q[env.state])
+print(np.array([rleft + gamma * vleft, rright + gamma * vright]))
 
-    plt.plot(range(n), errors, 'r-')
-    plt.plot(range(n), np.ones((n, )) * sub, 'k--')
-    plt.yscale('log')
+tdm = V
+for _ in range(depth - 1):
+    tdm = env.bellman(tdm)
 
-    plt.show()
-    pass
+gamma = env.gamma
+next_V = np.sum(env.P * tdm[..., np.newaxis, np.newaxis], axis=0)
+Q_d = env.R + gamma * next_V
+
+start = time.time()
+print(f'Running with {N} simulations')
+lookahead: PolicyOutput = run_mcts(key, jenv, depth, jpolicy, N, M_l)
+Q_hat = lookahead.search_tree.children_values[0, 0]
+print('Real vs approx Q_d function')
+print(Q_d[env.state])
+print(Q_hat)
+
+error = jnp.linalg.norm(Q_d[env.state] - Q_hat, ord=jnp.inf)
+print(f'Error: {error / np.max(np.abs(Q_d[env.state]))}')
+
+runtime = time.time() - start
+print(f'Took {runtime} seconds')
+
+
+# TODO SUBTREEEEEEEES

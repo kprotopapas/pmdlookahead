@@ -80,7 +80,7 @@ for vals in np.linspace(100, N, 100, dtype=np.int32):
     print(Q_d[env.state])
     print(Q_hat)
 
-    error = jnp.linalg.norm(Q_d[env.state] - Q_hat, ord=jnp.inf)
+    error = np.linalg.norm(Q_d[env.state] - Q_hat, ord=np.inf)
     print(f'Error: {error / np.max(np.abs(Q_d[env.state]))}')
 
     runtime = time.time() - start
