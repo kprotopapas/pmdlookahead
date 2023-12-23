@@ -21,7 +21,7 @@ group = args.group
 
 env = Trap(size, gamma)
 
-pi = SoftmaxPolicy(env.observation_space, env.action_space)
+pi = SoftmaxPolicy(env.observation_space.n, env.action_space.n)
 V = env.V(pi)
 Q = env.Q(pi)
 

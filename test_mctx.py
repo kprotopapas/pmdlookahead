@@ -30,7 +30,7 @@ for i in range(size - depth - 3):
 
 embedding = lambda state: state[0] * size + state[1]
 jpolicy = JSoftmaxPolicy.uniform(env.n_obs, env.n_act, embedding)
-policy = SoftmaxPolicy(env.observation_space, env.action_space)
+policy = SoftmaxPolicy(env.observation_space.n, env.action_space.n)
 
 Q = env.Q(policy)
 V = env.V(policy)

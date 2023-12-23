@@ -214,7 +214,7 @@ class PQA(Algorithm):
 class EQA(Algorithm):
     # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
     def __init__(self, env: Tabular, horizon: int, n_trajectories: int):
-        pi = SoftmaxPolicy(env.observation_space, env.action_space)
+        pi = SoftmaxPolicy(env.observation_space.n, env.action_space.n)
         super().__init__(env, horizon, n_trajectories, pi, 'EQA')
 
     
@@ -333,7 +333,7 @@ class DPMD(Algorithm):
 
 class DEQA(DPMD):
     def __init__(self, env: Tabular, horizon: int = None, M_l: int = None, d: int = 1, M_t: int = None, M_f: int = None):
-        pi = SoftmaxPolicy(env.observation_space, env.action_space)
+        pi = SoftmaxPolicy(env.observation_space.n, env.action_space.n)
         name = f'{d}-EQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 

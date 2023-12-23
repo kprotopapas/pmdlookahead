@@ -69,14 +69,10 @@ class DirectPolicy(Policy):
 
 
 class SoftmaxPolicy(Policy):
-    def __init__(self, states, actions):
-        n_states = states.n
-        n_actions = actions.n
-
+    def __init__(self, n_states, n_actions):
         self.n_states = n_states
         self.n_actions = n_actions
         self.params = np.zeros((n_states, n_actions))
-        self.actions = actions
     
 
     def sample(self, state):
