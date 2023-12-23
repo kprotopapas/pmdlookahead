@@ -14,7 +14,7 @@ import wandb
 args = parse_args()
 group = args.group
 depth = args.d
-N = args.epochs
+N = 500
 
 
 size = 32
@@ -29,7 +29,7 @@ for i in range(size - depth - 3):
 
 
 embedding = lambda state: state[0] * size + state[1]
-jpolicy = JSoftmaxPolicy(env.n_obs, env.n_act, embedding)
+jpolicy = JSoftmaxPolicy.uniform(env.n_obs, env.n_act, embedding)
 policy = SoftmaxPolicy(env.observation_space, env.action_space)
 
 Q = env.Q(policy)
@@ -61,36 +61,19 @@ gamma = env.gamma
 next_V = np.sum(env.P * tdm[..., np.newaxis, np.newaxis], axis=0)
 Q_d = env.R + gamma * next_V
 
-config = {'alg': 'MCTX',
-          'epochs': N,
-          'depth': depth,
-          'policy': 'uniform',
-          'M_l': M_l}
 
-run = wandb.init(project="pmd-ts", config=config, group=group)
+start = time.time()
+print(f'Running with {N} simulations')
+lookahead: PolicyOutput = run_mcts(key, jenv, depth, jpolicy, N, M_l)
+Q_hat = lookahead.search_tree.children_values[0, 0]
+print('Real vs approx Q_d function')
+print(Q_d[env.state])
+print(Q_hat)
 
+error = np.linalg.norm(Q_d[env.state] - Q_hat, ord=np.inf)
+print(f'Error: {error / np.max(np.abs(Q_d[env.state]))}')
 
-
-for vals in np.linspace(100, N, 100, dtype=np.int32):
-    start = time.time()
-    print(f'Running with {vals} simulations')
-    lookahead: PolicyOutput = run_mcts(key, jenv, depth, jpolicy, vals, M_l)
-    Q_hat = lookahead.search_tree.children_values[0, 0]
-    print('Real vs approx Q_d function')
-    print(Q_d[env.state])
-    print(Q_hat)
-
-    error = np.linalg.norm(Q_d[env.state] - Q_hat, ord=np.inf)
-    print(f'Error: {error / np.max(np.abs(Q_d[env.state]))}')
-
-    runtime = time.time() - start
-    print(f'Took {runtime} seconds')
-
-    out_log = {'num_simulations': vals,
-               'error': error,
-               'runtime': runtime}
-    
-    wandb.log(out_log)
-
+runtime = time.time() - start
+print(f'Took {runtime} seconds')
 
 # TODO SUBTREEEEEEEES

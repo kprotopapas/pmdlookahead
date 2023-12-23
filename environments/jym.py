@@ -1,9 +1,11 @@
 from __future__ import annotations
-
+from typing import Callable
 
 import chex
 from jax import numpy as jnp
 import numpy as np
+
+from algorithms.policies import SoftmaxPolicy
 
 State = chex.Array
 Reward = chex.Array
@@ -119,12 +121,38 @@ class JPolicy(object):
     def act(self, env: JEnv) -> chex.Array:
         pass
 
+    def update(self, grad: chex.Array, lr: float) -> JPolicy:
+        pass
+
+
 
 class JSoftmaxPolicy(JPolicy): # softmax policy
-    def __init__(self, n_states: int, n_act: int, embedding = lambda x: x):
+    def __init__(self, logits: chex.Array, embedding: Callable = lambda x: x):
+        self.logits = logits
         self.embedding = embedding
-        self.logits = jnp.zeros((n_states, n_act), dtype=jnp.float32)
+    
 
     def act(self, env: JEnv) -> chex.Array:
         state = self.embedding(env.state)
         return self.logits[state]
+    
+
+    def update(self, grad: chex.Array, lr: float) -> JPolicy:
+        grad = grad - grad.mean(axis=1)[..., jnp.newaxis] # center gradient before update
+        new = self.logits + lr * grad
+        new_centered = new - new.max(axis=1)[..., np.newaxis] # renormalize by max
+        
+        argmax = jnp.where(grad == grad.max(axis=1)[..., jnp.newaxis], jnp.inf, -jnp.inf)
+        logits = jnp.where(jnp.isinf(lr), argmax, new_centered)
+
+        return JSoftmaxPolicy(embedding=self.embedding,
+                                  logits=logits)
+    
+
+    def numpy(self):
+        return SoftmaxPolicy(self.logits.shape[0], self.logits.shape[1])
+    
+
+    @staticmethod
+    def uniform(n_states: int, n_actions: int, embedding = lambda x: x) -> JSoftmaxPolicy:
+        return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)), embedding=embedding)
