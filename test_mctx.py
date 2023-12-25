@@ -2,6 +2,7 @@ import jax
 from jax import numpy as jnp
 import numpy as np
 import time
+from algorithms.policies import JSoftmaxPolicy
 
 from environments.jym import *
 from environments.solvable import *
@@ -28,8 +29,7 @@ for i in range(size - depth - 3):
     env.step(1)
 
 
-embedding = lambda state: state[0] * size + state[1]
-jpolicy = JSoftmaxPolicy.uniform(env.n_obs, env.n_act, embedding)
+jpolicy = JSoftmaxPolicy.uniform(env.n_obs, env.n_act, jenv.embedding)
 policy = SoftmaxPolicy(env.observation_space.n, env.action_space.n)
 
 Q = env.Q(policy)

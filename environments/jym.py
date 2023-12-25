@@ -5,7 +5,6 @@ import chex
 from jax import numpy as jnp
 import numpy as np
 
-from algorithms.policies import SoftmaxPolicy
 
 State = chex.Array
 Reward = chex.Array
@@ -28,12 +27,17 @@ class JEnv(object):
     def reset(self, _ = None) -> JEnv:
         pass
 
+    @property
+    def embedding(self) -> Callable:
+        pass
+
 
 @chex.dataclass(kw_only=True)
 class JDeepsea(JEnv):
     size: int
     state: State = jnp.zeros((2, ), dtype=jnp.int32)
     n_actions: int = 2
+
 
     def step(self, action: Action) -> tuple[JEnv, Reward, Done]:
         env = self
@@ -61,6 +65,11 @@ class JDeepsea(JEnv):
     def reset(self, _ = None):
         return JDeepsea(size = self.size, gamma = self.gamma)
     
+    
+    @property
+    def embedding(self):
+        return lambda state: state[0] * self.size + state[1]
+
 
     def __str__(self):
         env = self
@@ -109,50 +118,13 @@ class JTrap(JEnv):
         return JTrap(size = self.size, gamma = self.gamma)
     
 
+    @property
+    def embedding(self):
+        return self.state + self.size
+    
+
     def __str__(self):
         env = self
         board = np.array(self.reward_matrix).astype(str)
         board[env.state] = '#'
         return str(board)
-
-
-class JPolicy(object):
-    # Returns logits associated with current 
-    def act(self, env: JEnv) -> chex.Array:
-        pass
-
-    def update(self, grad: chex.Array, lr: float) -> JPolicy:
-        pass
-
-
-
-class JSoftmaxPolicy(JPolicy): # softmax policy
-    def __init__(self, logits: chex.Array, embedding: Callable = lambda x: x):
-        self.logits = logits
-        self.embedding = embedding
-    
-
-    def act(self, env: JEnv) -> chex.Array:
-        state = self.embedding(env.state)
-        return self.logits[state]
-    
-
-    def update(self, grad: chex.Array, lr: float) -> JPolicy:
-        grad = grad - grad.mean(axis=1)[..., jnp.newaxis] # center gradient before update
-        new = self.logits + lr * grad
-        new_centered = new - new.max(axis=1)[..., np.newaxis] # renormalize by max
-        
-        argmax = jnp.where(grad == grad.max(axis=1)[..., jnp.newaxis], jnp.inf, -jnp.inf)
-        logits = jnp.where(jnp.isinf(lr), argmax, new_centered)
-
-        return JSoftmaxPolicy(embedding=self.embedding,
-                                  logits=logits)
-    
-
-    def numpy(self):
-        return SoftmaxPolicy(self.logits.shape[0], self.logits.shape[1])
-    
-
-    @staticmethod
-    def uniform(n_states: int, n_actions: int, embedding = lambda x: x) -> JSoftmaxPolicy:
-        return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)), embedding=embedding)

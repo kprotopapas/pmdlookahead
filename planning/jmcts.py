@@ -15,6 +15,7 @@ from mctx._src import search
 from mctx._src import seq_halving
 
 from functools import partial as par
+from algorithms.policies import JPolicy
 
 from environments.jym import *
 from environments.solvable import *

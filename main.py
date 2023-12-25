@@ -3,15 +3,18 @@ import argparse
 from matplotlib import pyplot as plt
 import time
 import pandas as pd
+from algorithms.tree import PGMCTS
+
+from environments.jym import JDeepsea
 
 from environments.solvable import *
 from algorithms.baselines import *
 from helper import random_simplex, parse_args
 
 def run(d=1):
-    deep_pmd = alg(env, horizon=H, M_l=M_l, d=d, M_t=M_t, M_f=M_f)
+    agent = alg(env, horizon=H, M_l=M_l, d=d, M_t=M_t, M_f=M_f)
     start = time.time()
-    info_dpmd = deep_pmd.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr, group=group)
+    info_dpmd = agent.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr, group=group)
     time_dpmd = time.time() - start
     print(f'{alg.__name__} with depth {d} took time {time_dpmd}')
 
@@ -32,12 +35,13 @@ def parse_alg(alg: str):
             return PQA
         case 'EQA':
             return EQA
+        case 'PGMCTS':
+            return PGMCTS
 
 
 if __name__ == '__main__':
     args = parse_args()
 
-    n_actions = 4
     size = args.size
     horizon = args.horizon
     gamma = args.gamma or 1 - 1 / horizon
@@ -58,21 +62,22 @@ if __name__ == '__main__':
     mu = random_simplex((size,))
     
     #env = Tabular(P, R, mu, gamma)
-    env = Trap(size, gamma)
-    #env = Deepsea(size, gamma)
+    #env = Trap(size, gamma)
+    env = Deepsea(size, gamma)
 
 
     H = 2 * horizon
-    M_l = 10
-    M_t = horizon
-    M_f = 10
+    M_l = 16
+    M_t = 50
+    M_f = 1
 
     infos = []
     
     # TRY WITH LOGISTIC LEARNING RATE
 
     a = 75
-    lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
+    #lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
+    lr = 0.1
     for _ in range(n_agents):
         print(f'Running {alg.__name__} with depth {d}')
         infos.append(run(d=d))

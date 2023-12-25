@@ -3,6 +3,7 @@ from gymnasium import spaces
 import numpy as np
 
 from algorithms.policies import Policy
+from environments.jym import JEnv, JDeepsea, JTrap
 
 
 class Tabular(gym.Env):
@@ -137,34 +138,39 @@ class Tabular(gym.Env):
     def rtg(self, rewards):
         discounts = self.gamma**np.arange(len(rewards))
         return np.cumsum((discounts * rewards)[::-1])[::-1].copy()
+    
+
+    def jax(self) -> JEnv:
+        pass
 
 
 class Trap(Tabular):
     # Defines a Trap environment, where an agent needs to sacrifice immediate reward for large future reward
     # Reward structure looks like: [large, -1, ..., -1, -1, 0, +1, +1, ..., +1, -large] (then normalized to 1)
-    def __init__(self, length: int, gamma: float, noop: bool = False):
-        size = 2 * length + 1
+    def __init__(self, size: int, gamma: float, noop: bool = False):
+        self.size = size
+        length = 2 * size + 1
         n_actions = 3 if noop else 2
 
-        P = np.zeros((size, size, n_actions))
-        P[:, 1:, 0] = np.identity(size)[:, :-1]
+        P = np.zeros((length, length, n_actions))
+        P[:, 1:, 0] = np.identity(length)[:, :-1]
         P[0, 0, 0] = 1
 
-        P[:, :-1, -1] = np.identity(size)[:, 1:]
+        P[:, :-1, -1] = np.identity(length)[:, 1:]
         P[-1, -1, -1] = 1
 
         if noop:
-            P[:, :, 1] = np.identity(size)
+            P[:, :, 1] = np.identity(length)
 
-        factor = 0.5 * gamma**length * (1 - gamma)
+        factor = 0.5 * gamma**size * (1 - gamma)
         self.factor = factor
 
-        self.values = np.zeros((size,))
+        self.values = np.zeros((length,))
         self.values[0] = 1
-        self.values[1:length] = -factor
-        self.values[length + 1:] = factor
+        self.values[1:size] = -factor
+        self.values[size + 1:] = factor
 
-        R = np.zeros((size, n_actions))
+        R = np.zeros((length, n_actions))
         R[1:, 0] = self.values[:-1]
         R[0, 0] = self.values[0]
         R[:-1, -1] = self.values[1:]
@@ -175,10 +181,14 @@ class Trap(Tabular):
 
         R = R / np.max(np.abs(R))
 
-        mu = 1 * (np.arange(size) == length)
+        mu = 1 * (np.arange(length) == size)
         
-        name = f'Trap-v2-{length}'
+        name = f'Trap-v2-{size}'
         super().__init__(P, R, mu, gamma, name=name)
+
+
+    def jax(self) -> JEnv:
+        return JTrap(size=self.size, gamma=self.gamma)
 
 
     def __str__(self):
@@ -296,6 +306,10 @@ class Deepsea(Tabular):
         grid_str[-1, -1] = 'X'
 
         return str(grid_str)
+
+
+    def jax(self) -> JEnv:
+        return JDeepsea(size=self.size, gamma=self.gamma)
     
 
 class Cliffwalk(Tabular):

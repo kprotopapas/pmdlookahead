@@ -1,6 +1,21 @@
-import numpy as np
+from __future__ import annotations
 
+import chex
+from typing import Callable
+import numpy as np
+from jax import numpy as jnp
+
+from environments.jym import JEnv
 from helper import *
+
+
+class JPolicy(object):
+    # Returns logits associated with current 
+    def act(self, env: JEnv) -> chex.Array:
+        pass
+
+    def update(self, grad: chex.Array, lr: float) -> JPolicy:
+        pass
 
 
 class Policy:
@@ -22,6 +37,10 @@ class Policy:
     @property
     def probas(self):
         raise NotImplementedError
+    
+
+    def jax(self, embedding = lambda x: x) -> JPolicy:
+        pass
 
 
 class DirectPolicy(Policy):
@@ -68,6 +87,38 @@ class DirectPolicy(Policy):
         return self.probabilities
 
 
+class JSoftmaxPolicy(JPolicy): # softmax policy
+    def __init__(self, logits: chex.Array, embedding: Callable = lambda x: x):
+        self.logits = logits
+        self.embedding = embedding
+
+
+    def act(self, env: JEnv) -> chex.Array:
+        state = self.embedding(env.state)
+        return self.logits[state]
+
+
+    def update(self, grad: chex.Array, lr: float) -> JPolicy:
+        grad = grad - grad.mean(axis=1)[..., jnp.newaxis] # center gradient before update
+        new = self.logits + lr * grad
+        new_centered = new - new.max(axis=1)[..., np.newaxis] # renormalize by max
+
+        argmax = jnp.where(grad == grad.max(axis=1)[..., jnp.newaxis], jnp.inf, -jnp.inf)
+        logits = jnp.where(jnp.isinf(lr), argmax, new_centered)
+
+        return JSoftmaxPolicy(embedding=self.embedding,
+                                  logits=logits)
+
+
+    def numpy(self):
+        return SoftmaxPolicy(self.logits.shape[0], self.logits.shape[1])
+
+
+    @staticmethod
+    def uniform(n_states: int, n_actions: int, embedding = lambda x: x) -> JSoftmaxPolicy:
+        return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)), embedding=embedding)
+
+
 class SoftmaxPolicy(Policy):
     def __init__(self, n_states, n_actions):
         self.n_states = n_states
@@ -108,3 +159,8 @@ class SoftmaxPolicy(Policy):
         fill = nans / np.maximum(nans.sum(axis=1)[..., np.newaxis], np.ones_like(nans))
         probas = np.where(np.isnan(probas), fill, probas)
         return probas
+
+    
+    def jax(self, embedding = lambda x: x) -> JPolicy:
+        logits = jnp.array(self.params)
+        return JSoftmaxPolicy(logits, embedding)

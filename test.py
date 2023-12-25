@@ -2,6 +2,7 @@ import jax
 from jax import numpy as jnp
 import numpy as np
 import time
+from algorithms.policies import JSoftmaxPolicy
 
 from environments.jym import *
 from environments.solvable import *
