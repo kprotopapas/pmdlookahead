@@ -295,6 +295,8 @@ class Deepsea(Tabular):
 
     def step(self, action):
         state, action, info = super().step(action)
+        y, _ = np.argwhere(self.grid == self.state)[0]
+        info["terminal"] = y == self.size - 1
         return state, action, info
     
 

@@ -44,7 +44,7 @@ class Algorithm(object):
             run = wandb.init(project="pmd-ts", config=config, group=group)
 
         V_opt = self.env.optimal().max(axis=1)
-        self.env.reset(samples=True)
+        start, _ = self.env.reset(samples=True)
 
         for k in range(epochs):
             Q = self.env.Q(self.pi)
@@ -60,7 +60,7 @@ class Algorithm(object):
             self.pi.update(gradient, lrk)
 
             V = np.sum(self.pi.probas * Q, axis=1)
-            sub = np.max(np.abs(V_opt - V))
+            sub = np.max(np.abs(np.dot(V_opt - V, self.env.mu)))
 
             g_norm = gradient - gradient.mean(axis=1)[..., np.newaxis]
             err = gradient - grad_exact
@@ -217,12 +217,25 @@ class EQA(Algorithm):
         pi = SoftmaxPolicy(env.observation_space.n, env.action_space.n)
         super().__init__(env, horizon, n_trajectories, pi, 'EQA')
 
+
+
+    def estimate_value(self):
+        Q = np.zeros_like(self.env.R)
+        self.env.reset()
+        states, actions, rewards = self.sample_trajectory()
+        rtg = self.env.rtg(rewards)
+        for s, a, r in zip(states, actions, rtg):
+            Q[s, a] += r # or maybe average???
+
+        return Q
+
     
     def grad_exact(self, Q):
         return Q
 
 
     def lrk(self, lr, k, gradient):
+        return (lr(k) if callable(lr) else lr, 0)
         greedy = 1 * (gradient == gradient.max(axis=1)[..., np.newaxis])
         greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
         pk = self.pi.probas

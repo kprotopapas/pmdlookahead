@@ -47,15 +47,16 @@ class PGMCTS(Algorithm):
                 grad_k = output.search_tree.children_values[0, 0]
 
                 ind = jpi.embedding(jenv.state)
-                v = visits[ind]
-                grad.at[ind].add()
+                grad = grad.at[ind].add(grad_k)
+                visits = visits.at[ind].add(1)
 
-            
                 logits = jpi.act(jenv)
                 action = jax.random.categorical(action_key, logits)
                 jenv, r, _ = jenv.step(action)
 
             self.env.samples += self.n_trajectories * self.d * self.M_l
+
+        grad = grad / visits.reshape(-1, 1)
             
         return np.array(grad)
 

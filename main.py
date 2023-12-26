@@ -13,6 +13,7 @@ from helper import random_simplex, parse_args
 
 def run(d=1):
     agent = alg(env, horizon=H, M_l=M_l, d=d, M_t=M_t, M_f=M_f)
+    #agent = alg(env, horizon=H, n_trajectories=1)
     start = time.time()
     info_dpmd = agent.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr, group=group)
     time_dpmd = time.time() - start
@@ -67,7 +68,7 @@ if __name__ == '__main__':
 
 
     H = 2 * horizon
-    M_l = 16
+    M_l = 128
     M_t = 50
     M_f = 1
 
