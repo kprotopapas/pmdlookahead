@@ -68,7 +68,7 @@ class JDeepsea(JEnv):
     
     @property
     def embedding(self):
-        return lambda state: state[0] * self.size + state[1]
+        return jnp.array([self.size, 1])
 
 
     def __str__(self):

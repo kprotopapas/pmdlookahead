@@ -9,6 +9,7 @@ from environments.jym import JEnv
 from helper import *
 
 
+@chex.dataclass(kw_only=True)
 class JPolicy(object):
     # Returns logits associated with current 
     def act(self, env: JEnv) -> chex.Array:
@@ -87,14 +88,13 @@ class DirectPolicy(Policy):
         return self.probabilities
 
 
+@chex.dataclass(kw_only=True)
 class JSoftmaxPolicy(JPolicy): # softmax policy
-    def __init__(self, logits: chex.Array, embedding: Callable = lambda x: x):
-        self.logits = logits
-        self.embedding = embedding
-
+    logits: chex.Array
+    embedding: chex.Array = jnp.ones((1,))
 
     def act(self, env: JEnv) -> chex.Array:
-        state = self.embedding(env.state)
+        state = jnp.dot(self.embedding, env.state)
         return self.logits[state]
 
 
@@ -117,6 +117,7 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
     @staticmethod
     def uniform(n_states: int, n_actions: int, embedding = lambda x: x) -> JSoftmaxPolicy:
         return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)), embedding=embedding)
+
 
 
 class SoftmaxPolicy(Policy):

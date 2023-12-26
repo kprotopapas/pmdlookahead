@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     H = 2 * horizon
     M_l = 128
-    M_t = 50
+    M_t = 500
     M_f = 1
 
     infos = []

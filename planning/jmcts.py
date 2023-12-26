@@ -1,3 +1,4 @@
+import time
 import chex
 import jax
 from jax import numpy as jnp
@@ -6,7 +7,7 @@ from mctx import PolicyOutput
 
 from typing import Optional, Any
 
-from mctx._src.search import Tree, expand, backward, simulate
+from mctx._src.search import Tree, expand, backward, simulate ,instantiate_tree_from_root
 from mctx._src.policies import _apply_temperature, _get_logits_from_probs, _add_dirichlet_noise, _mask_invalid_actions
 from mctx._src import action_selection
 from mctx._src import base
@@ -22,6 +23,7 @@ from environments.solvable import *
 from algorithms.policies import *
 
 
+@jax.jit
 def rollout(env: JEnv, rng_key: chex.PRNGKey, pi: JPolicy) -> Reward:
     reward_so_far = env.reward
 
@@ -41,31 +43,31 @@ def rollout(env: JEnv, rng_key: chex.PRNGKey, pi: JPolicy) -> Reward:
     return leaf.reward - reward_so_far
 
 
-def value_function(rollouts: int, env: JEnv, rng_key: chex.PRNGKey, pi: JPolicy) -> chex.Array:
-    #return JV[embedding(env.state)]
-
+@par(jax.jit, static_argnums=(0,))
+def value_function(rollouts: int, val_pi: JPolicy, env: JEnv, rng_key: chex.PRNGKey) -> chex.Array:
     keys = jax.random.split(rng_key, rollouts)
-    rolls = jax.vmap(rollout, (None, 0, None))(env, keys, pi)
+    rolls = jax.vmap(rollout, (None, 0, None))(env, keys, val_pi)
     return jnp.mean(rolls)
 
 
-def root_fn(rollouts: int, env: JEnv, rng_key: chex.PRNGKey, pi: JPolicy) -> mctx.RootFnOutput:
+@par(jax.jit, static_argnums=(0,))
+def root_fn(rollouts: int, val_pi: JPolicy, env: JEnv, rng_key: chex.PRNGKey) -> mctx.RootFnOutput:
     return mctx.RootFnOutput(
         prior_logits = jnp.zeros((2,)),
-        value = value_function(rollouts, env, rng_key, pi),
+        value = value_function(rollouts, val_pi, env, rng_key),
         embedding = env
     )
 
 
-def recurrent_fn(params, rng_key: chex.PRNGKey, action: Action, embedding: JEnv) -> mctx.RecurrentFnOutput:
+@par(jax.jit, static_argnums=(0,))
+def recurrent_fn(rollouts: int, val_pi: JPolicy, params, 
+                 rng_key: chex.PRNGKey, action: Action, embedding: JEnv) -> mctx.RecurrentFnOutput:
     # Extract the environment from the embedding.
     env = embedding
     discount = env.gamma
 
     # Play the action.
     env, reward, done = env.step(action)
-    pi = params['pi']
-    rollouts = params['rollouts']
     # Create the new MCTS node.
     recurrent_fn_output = mctx.RecurrentFnOutput(
         # reward for playing `action`
@@ -75,29 +77,34 @@ def recurrent_fn(params, rng_key: chex.PRNGKey, action: Action, embedding: JEnv)
         # prior for the new state
         prior_logits=jnp.zeros((2,)),
         # value for the new state
-        value=jnp.where(done, 0, value_function(rollouts, env, rng_key, pi)).astype(jnp.float32),
+        value=jnp.where(done, 0, value_function(rollouts, val_pi, env, rng_key)).astype(jnp.float32),
     )
 
     # Return the new node and the new environment.
     return recurrent_fn_output, env
 
 
-@par(jax.jit, static_argnums=range(2, 6))
+
+@par(jax.jit, static_argnums=(3, 4, 5))
 def run_mcts(rng_key: chex.PRNGKey,
              env: JEnv,
-             depth: int,
              val_pi: JPolicy,
+             depth: int,
              num_simulations: int,
-             num_rollouts: int) -> PolicyOutput:
-    batch_size = 1
+             rollouts: int) -> PolicyOutput:
+    
     key1, key2 = jax.random.split(rng_key)
 
-    params = {'pi': val_pi, 'rollouts': num_rollouts}
-    root = jax.vmap(root_fn, (None, None, 0, None))(num_rollouts, env, jax.random.split(key2, batch_size), val_pi)
+    batch_size = 1
+    root_jit = jax.jit(par(root_fn, rollouts, val_pi))
+    root = jax.vmap(root_jit, (None, 0))(env, jax.random.split(key2, batch_size))
 
-    rf = jax.vmap(recurrent_fn, (None, None, 0, 0))
+    rfn_jit = jax.jit(par(recurrent_fn, rollouts, val_pi))
+    rf = jax.vmap(rfn_jit, (None, None, 0, 0))  
+
+    #policy = jax.jit(mctx.muzero_policy, static_argnames=('temperature', 'recurrent_fn', 'num_simulations', 'loop_fn', 'qtransform', 'max_depth', 'dirichlet_fraction', 'dirichlet_alpha', 'pb_c_init', 'pb_c_base'))
     policy_output = mctx.muzero_policy(
-        params=params,
+        params=None,
         rng_key=key1,
         root=root,
         recurrent_fn=rf,
