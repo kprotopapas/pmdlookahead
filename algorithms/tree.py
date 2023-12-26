@@ -46,7 +46,7 @@ class PGMCTS(Algorithm):
                 output: PolicyOutput = run_mcts(key, jenv, jpi, self.d, self.n_trajectories, self.M_l)
                 grad_k = output.search_tree.children_values[0, 0]
 
-                ind = jpi.embedding(jenv.state)
+                ind = jnp.dot(jpi.embedding, jenv.state)
                 grad = grad.at[ind].add(grad_k)
                 visits = visits.at[ind].add(1)
 

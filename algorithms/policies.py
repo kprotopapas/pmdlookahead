@@ -162,6 +162,6 @@ class SoftmaxPolicy(Policy):
         return probas
 
     
-    def jax(self, embedding = lambda x: x) -> JPolicy:
+    def jax(self, embedding=jnp.ones((1,))) -> JPolicy:
         logits = jnp.array(self.params)
-        return JSoftmaxPolicy(logits, embedding)
+        return JSoftmaxPolicy(logits=logits, embedding=embedding)
