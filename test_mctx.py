@@ -15,7 +15,7 @@ import wandb
 args = parse_args()
 group = args.group
 depth = args.d
-N = 500
+N = 50
 M_l = 128
 
 
