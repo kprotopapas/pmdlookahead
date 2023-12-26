@@ -12,8 +12,11 @@ from algorithms.baselines import *
 from helper import random_simplex, parse_args
 
 def run(d=1):
-    agent = alg(env, horizon=H, M_l=M_l, d=d, M_t=M_t, M_f=M_f)
-    #agent = alg(env, horizon=H, n_trajectories=1)
+    if alg != EQA:
+        agent = alg(env, horizon=H, M_l=M_l, d=d, M_t=M_t, M_f=M_f)
+    else:
+        agent = alg(env, horizon=H, n_trajectories=1)
+        
     start = time.time()
     info_dpmd = agent.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr, group=group)
     time_dpmd = time.time() - start
