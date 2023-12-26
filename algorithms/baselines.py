@@ -2,6 +2,7 @@ from environments.solvable import Tabular
 from algorithms.policies import DirectPolicy, Policy, SoftmaxPolicy
 from scipy.stats import entropy
 import logging
+import time
 
 import numpy as np
 import wandb
@@ -47,6 +48,8 @@ class Algorithm(object):
         start, _ = self.env.reset(samples=True)
 
         for k in range(epochs):
+            start = time.time()
+
             Q = self.env.Q(self.pi)
             grad_exact = self.grad_exact(Q)
 
@@ -83,8 +86,9 @@ class Algorithm(object):
 
             info.append(out_log)
             
+            duration = time.time() - start
             if verbose:
-                logging.info(f'Epoch: {k}, suboptimality: {sub}')
+                logging.info(f'Epoch: {k}, suboptimality: {sub}, in time: {duration}')
 
             if use_wandb:
                 wandb.log(out_log)
