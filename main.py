@@ -79,9 +79,10 @@ if __name__ == '__main__':
     
     # TRY WITH LOGISTIC LEARNING RATE
 
-    a = 75
-    #lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
-    lr = 0.1
+    a = lr
+    lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
+    ys = [lr(k) for k in range(epochs)]
+
     for _ in range(n_agents):
         print(f'Running {alg.__name__} with depth {d}')
         infos.append(run(d=d))
