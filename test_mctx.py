@@ -15,17 +15,17 @@ import wandb
 args = parse_args()
 group = args.group
 depth = args.d
-N = 50
+N = 500
 M_l = 128
 
 
 size = 16
-depth = 5
+depth = 16
 gamma = 0.99
 env = Deepsea(size, gamma)
 jenv = JDeepsea(size=size, gamma=gamma)
 
-for i in range(size - depth - 3):
+for i in range(size - 10):
     jenv, _, _ = jenv.step(1)
     env.step(1)
 
@@ -71,22 +71,20 @@ print()
 print('Real vs approx Q_d function')
 print(Q_d[env.state])
 print(Q_hat)
-
-print('Running again')
-start = time.time()
-lookahead2: PolicyOutput = run_mcts(key, jenv, jpolicy, depth, N, M_l)
-print(f'Took {time.time() - start} seconds')
-
-print('Running again')
-start = time.time()
-lookahead2: PolicyOutput = run_mcts(key, jenv, jpolicy, depth, N, M_l)
-print(f'Took {time.time() - start} seconds')
-
-
 error = np.linalg.norm(Q_d[env.state] - Q_hat, ord=np.inf)
 print(f'Error: {error / np.max(np.abs(Q_d[env.state]))}')
+print()
 
-runtime = time.time() - start
-print(f'Took {runtime} seconds')
+print('Running again')
+start = time.time()
+lookahead2: PolicyOutput = run_mcts(key, jenv, jpolicy, depth, N, M_l)
+print(f'Took {time.time() - start} seconds')
+
+print()
+print('Running again')
+start = time.time()
+lookahead2: PolicyOutput = run_mcts(key, jenv, jpolicy, depth, N, M_l)
+print(f'Took {time.time() - start} seconds')
+
 
 # TODO SUBTREEEEEEEES
