@@ -40,6 +40,10 @@ class PGMCTS(Algorithm):
             jpi = self.pi.jax(jenv.embedding)
 
             action_key, other_key = jax.random.split(key, 2)
+        
+            actions = []
+            states = [self.env.state]
+            rewards = []
 
             while not jenv.done:
                 # maybe change to fixed horizon rollouts for larger games!!!
@@ -53,6 +57,13 @@ class PGMCTS(Algorithm):
                 logits = jpi.act(jenv)
                 action = jax.random.categorical(action_key, logits)
                 jenv, r, _ = jenv.step(action)
+                a = int(action)
+                s, r, _ = self.env.step(a)
+
+                actions.append(a)
+                states.append(s)
+                rewards.append(r)
+
 
             self.env.samples += self.n_trajectories * self.d * self.M_l
 
@@ -66,7 +77,7 @@ class PGMCTS(Algorithm):
     
 
     def lrk(self, lr, k, gradient):
-        return 1, 1
+        return lr(k) if callable(lr) else lr, 1
         greedy = 1 * (gradient == gradient.max(axis=1)[..., np.newaxis])
         greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
         pk = self.pi.probas

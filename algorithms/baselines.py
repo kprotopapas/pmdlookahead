@@ -45,7 +45,8 @@ class Algorithm(object):
             run = wandb.init(project="pmd-ts", config=config, group=group)
 
         V_opt = self.env.optimal().max(axis=1)
-        start, _ = self.env.reset(samples=True)
+        V = self.env.V(self.pi)
+        sub = np.max(np.abs(np.dot(V_opt - V, self.env.mu)))
 
         for k in range(epochs):
             start = time.time()
@@ -63,7 +64,9 @@ class Algorithm(object):
             self.pi.update(gradient, lrk)
 
             V = np.sum(self.pi.probas * Q, axis=1)
-            sub = np.max(np.abs(np.dot(V_opt - V, self.env.mu)))
+            temp = np.max(np.abs(np.dot(V_opt - V, self.env.mu)))
+            imp = sub - temp
+            sub = temp
 
             g_norm = gradient - gradient.mean(axis=1)[..., np.newaxis]
             err = gradient - grad_exact
@@ -88,7 +91,7 @@ class Algorithm(object):
             
             duration = time.time() - start
             if verbose:
-                logging.info(f'Epoch: {k}, suboptimality: {sub}, in time: {duration}')
+                logging.info(f'Epoch: {k}, suboptimality: {sub:06f}, in time: {duration:06f}, improvement: {imp:06f}')
 
             if use_wandb:
                 wandb.log(out_log)
