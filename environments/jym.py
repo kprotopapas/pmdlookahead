@@ -28,8 +28,8 @@ class JEnv(object):
         pass
 
     @property
-    def embedding(self) -> Callable:
-        pass
+    def embedding(self) -> chex.Array:
+        return jnp.ones((1,))
 
 
 @chex.dataclass(kw_only=True)
@@ -67,7 +67,7 @@ class JDeepsea(JEnv):
     
     
     @property
-    def embedding(self):
+    def embedding(self) -> chex.Array:
         return jnp.array([self.size, 1])
 
 
@@ -116,11 +116,6 @@ class JTrap(JEnv):
     
     def reset(self, _ = None):
         return JTrap(size = self.size, gamma = self.gamma)
-    
-
-    @property
-    def embedding(self):
-        return self.state + self.size
     
 
     def __str__(self):
