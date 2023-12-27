@@ -15,12 +15,12 @@ import wandb
 args = parse_args()
 group = args.group
 depth = args.d
-N = 2500
+N = 50
 M_l = 128
 
 
 size = 16
-depth = 10
+depth = 7
 gamma = 0.99
 env = Deepsea(size, gamma)
 jenv = JDeepsea(size=size, gamma=gamma)

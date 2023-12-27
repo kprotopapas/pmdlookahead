@@ -22,7 +22,7 @@ class PGMCTS(Algorithm):
         self.d = d
         self.n_episodes = M_f
         self.M_l = M_l
-        self.simulations = M_t or d**2
+        self.simulations = M_t or 2**(d + 1)
 
         super().__init__(env, horizon, M_f, self.pi, f'{d}-PGMCTS')
         self.config['simulations'] = self.simulations
