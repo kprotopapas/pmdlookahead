@@ -16,15 +16,19 @@ from planning.jmcts import run_mcts
 
 
 class PGMCTS(Algorithm):
-    def __init__(self, env: Tabular, horizon: int = 100, d: int = 1, M_f: int = 1, M_l: int = 16, M_t: int = None):
+    def __init__(self, env: Tabular, horizon: int = 100, d: int = 1, M_f: int = 1, M_l: int = 128, M_t: int = None):
         
         self.pi = SoftmaxPolicy(env.n_obs, env.n_act)
         self.d = d
         self.n_episodes = M_f
         self.M_l = M_l
-        self.n_trajectories = M_t
+        self.simulations = M_t or d**2
 
-        super().__init__(env, horizon, self.n_trajectories, self.pi, f'{d}-PGMCTS')
+        super().__init__(env, horizon, M_f, self.pi, f'{d}-PGMCTS')
+        self.config['simulations'] = self.simulations
+        self.config['depth'] = self.d
+        self.config['episodes'] = self.n_episodes
+        self.config['rollouts'] = self.M_l
     
 
     # Plays a certain number of episodes to estimate the value function
@@ -39,7 +43,7 @@ class PGMCTS(Algorithm):
             jenv = self.env.jax()
             jpi = self.pi.jax(jenv.embedding)
 
-            action_key, other_key = jax.random.split(key)
+            tree_key, action_key = jax.random.split(key)
         
             actions = []
             states = [self.env.state]
@@ -47,7 +51,7 @@ class PGMCTS(Algorithm):
 
             while not jenv.done:
                 # maybe change to fixed horizon rollouts for larger games!!!
-                output: PolicyOutput = run_mcts(key, jenv, jpi, self.d, self.n_trajectories, self.M_l)
+                output: PolicyOutput = run_mcts(tree_key, jenv, jpi, self.d, self.simulations, self.M_l)
                 grad_k = output.search_tree.children_values[0, 0]
 
                 ind = jnp.dot(jpi.embedding, jenv.state)
@@ -66,7 +70,7 @@ class PGMCTS(Algorithm):
                 rewards.append(r)
 
 
-            self.env.samples += self.n_trajectories * self.d * self.M_l
+            self.env.samples += self.simulations * self.d * self.M_l
 
         grad = grad / np.maximum(visits, 1).reshape(-1, 1)
             
