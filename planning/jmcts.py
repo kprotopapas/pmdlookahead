@@ -77,7 +77,7 @@ def recurrent_fn(rollouts: int, val_pi: JPolicy, params,
         # prior for the new state
         prior_logits=jnp.zeros((2,)),
         # value for the new state
-        value=jnp.where(done, 0, value_function(rollouts, val_pi, env, rng_key)).astype(jnp.float32),
+        value=value_function(rollouts, val_pi, env, rng_key).astype(jnp.float32),
     )
 
     # Return the new node and the new environment.
@@ -111,6 +111,6 @@ def run_mcts(rng_key: chex.PRNGKey,
         num_simulations=num_simulations,
         max_depth=depth,
         qtransform=par(mctx.qtransform_by_min_max, min_value=-1, max_value=1),
-        pb_c_init=2
+        pb_c_init=1.21
     )
     return policy_output

@@ -13,7 +13,7 @@ from helper import random_simplex, parse_args
 
 def run(d=1):
     if alg != EQA:
-        agent = alg(env, horizon=H) # time per iteration 6.5 s
+        agent = alg(env, horizon=H, d=d) # time per iteration 0.3 s
     else:
         agent = alg(env, horizon=H, n_trajectories=1) # time per iteration 0.008 s
         

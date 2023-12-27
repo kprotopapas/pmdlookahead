@@ -52,7 +52,8 @@ class PGMCTS(Algorithm):
             while not jenv.done:
                 # maybe change to fixed horizon rollouts for larger games!!!
                 output: PolicyOutput = run_mcts(tree_key, jenv, jpi, self.d, self.simulations, self.M_l)
-                grad_k = output.search_tree.children_values[0, 0]
+                tree = output.search_tree
+                grad_k = tree.children_rewards[0, 0] + jenv.gamma * tree.children_values[0, 0]
 
                 ind = jnp.dot(jpi.embedding, jenv.state)
                 grad = grad.at[ind].add(grad_k)

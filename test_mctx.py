@@ -20,12 +20,12 @@ M_l = 128
 
 
 size = 16
-depth = 7
+depth = 5
 gamma = 0.99
 env = Deepsea(size, gamma)
 jenv = JDeepsea(size=size, gamma=gamma)
 
-for i in range(size - depth): # 4 steps
+for i in range(size - depth):
     jenv, _, _ = jenv.step(1)
     env.step(1)
 
@@ -65,7 +65,7 @@ start = time.time()
 
 print(f'Running with {N} simulations')
 lookahead: PolicyOutput = run_mcts(key, jenv, jpolicy, depth, N, M_l)
-Q_hat = lookahead.search_tree.children_values[0, 0]
+Q_hat = jenv.gamma * lookahead.search_tree.children_values[0, 0] + lookahead.search_tree.children_rewards[0, 0]
 print(f'Total ran in {time.time() - start} seconds')
 print()
 print('Real vs approx Q_d function')
