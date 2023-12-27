@@ -33,13 +33,13 @@ class PGMCTS(Algorithm):
         visits = jnp.zeros((grad.shape[0], ))
 
         for k in range(self.n_episodes):
-            key = jax.random.PRNGKey(k * 37)
+            key = jax.random.PRNGKey(self.env.samples * (k + 1))
 
             self.env.reset()
             jenv = self.env.jax()
             jpi = self.pi.jax(jenv.embedding)
 
-            action_key, other_key = jax.random.split(key, 2)
+            action_key, other_key = jax.random.split(key)
         
             actions = []
             states = [self.env.state]
@@ -55,6 +55,7 @@ class PGMCTS(Algorithm):
                 visits = visits.at[ind].add(1)
 
                 logits = jpi.act(jenv)
+                action_key, _ = jax.random.split(action_key)
                 action = jax.random.categorical(action_key, logits)
                 jenv, r, _ = jenv.step(action)
                 a = int(action)
@@ -67,7 +68,7 @@ class PGMCTS(Algorithm):
 
             self.env.samples += self.n_trajectories * self.d * self.M_l
 
-        grad = grad / visits.reshape(-1, 1)
+        grad = grad / np.maximum(visits, 1).reshape(-1, 1)
             
         return np.array(grad)
 
