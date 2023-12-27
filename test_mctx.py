@@ -15,17 +15,17 @@ import wandb
 args = parse_args()
 group = args.group
 depth = args.d
-N = 500
+N = 2500
 M_l = 128
 
 
 size = 16
-depth = 16
+depth = 10
 gamma = 0.99
 env = Deepsea(size, gamma)
 jenv = JDeepsea(size=size, gamma=gamma)
 
-for i in range(size - 10):
+for i in range(size - depth): # 4 steps
     jenv, _, _ = jenv.step(1)
     env.step(1)
 
@@ -85,6 +85,6 @@ print('Running again')
 start = time.time()
 lookahead2: PolicyOutput = run_mcts(key, jenv, jpolicy, depth, N, M_l)
 print(f'Took {time.time() - start} seconds')
-
+pass
 
 # TODO SUBTREEEEEEEES
