@@ -1,1 +1,1 @@
-python batch.py main --alg $1 -s 32 -t 25 -n 10 --group $2 --epochs 200 -d $3
+python batch.py main --alg $1 -s 16 -t 10 -n 10 --group $2 --epochs 80000 -d $3
