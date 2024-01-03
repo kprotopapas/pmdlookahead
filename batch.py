@@ -60,5 +60,5 @@ python {file}.py --alg {alg} -n 1 -s {size} -t {horizon} --epochs {epochs} --wan
         
         subprocess.run(['sbatch', f'script_{d}_{i}'])
 
-        time.sleep(1)
+        time.sleep(0.1)
         os.remove(f'script_{d}_{i}')
