@@ -71,7 +71,7 @@ class PGMCTS(Algorithm):
                 rewards.append(r)
 
 
-            self.env.samples += self.simulations * self.d * self.M_l
+            self.env.samples += self.simulations * self.d
 
         grad = grad / np.maximum(visits, 1).reshape(-1, 1)
             
