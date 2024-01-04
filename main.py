@@ -13,7 +13,7 @@ from helper import random_simplex, parse_args
 
 def run(d=1):
     if alg != EQA:
-        agent = alg(env, horizon=H, d=d, M_t=M_t) # time per iteration 0.3 s
+        agent = alg(env, horizon=H, d=d, M_t=M_t, seed=seed) # time per iteration 0.3 s
     else:
         agent = alg(env, horizon=H, n_trajectories=1) # time per iteration 0.008 s
         
@@ -61,6 +61,7 @@ if __name__ == '__main__':
     epochs = args.epochs
     d = args.d
     M_t = args.simulations
+    seed = args.seed
 
     P = random_simplex((size, size, 4))
     R = random_simplex((size, 4))

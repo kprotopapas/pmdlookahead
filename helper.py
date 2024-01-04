@@ -46,6 +46,7 @@ def parse_args(file=False):
     parser.add_argument('--exact', action='store_true')
     parser.add_argument('-d', type=int, default=1)
     parser.add_argument('--simulations', type=int, default=50)
+    parser.add_argument('--seed', type=int, default=1)
 
     parser.add_argument('--wandb', action='store_true')
     parser.add_argument('--group', type=str)
