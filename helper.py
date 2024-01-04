@@ -42,7 +42,7 @@ def parse_args(file=False):
     parser.add_argument('--n_agents', '-n', type=int, default=5)
     parser.add_argument('--alg', '-a', type=str, default='DPQA')
     parser.add_argument('--epochs', type=int, default=200)
-    parser.add_argument('--lr', '-l', type=float, default=0.1)
+    parser.add_argument('--lr', '-l', type=float, default=1.)
     parser.add_argument('--exact', action='store_true')
     parser.add_argument('-d', type=int, default=1)
     parser.add_argument('--simulations', type=int, default=50)
