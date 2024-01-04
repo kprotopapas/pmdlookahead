@@ -5,7 +5,7 @@ import time
 from helper import parse_args
 
 if __name__ == '__main__':
-    args = parse_args()
+    args = parse_args(file=True)
 
     file = args.file
 
