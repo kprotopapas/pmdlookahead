@@ -3,6 +3,7 @@ import jax
 import chex
 import numpy as np
 from scipy.stats import entropy
+import os
 
 
 from jax import numpy as jnp
@@ -36,8 +37,11 @@ class PGMCTS(Algorithm):
         grad = jnp.zeros((self.env.R.shape))
         visits = jnp.zeros((grad.shape[0], ))
 
+        seed = int.from_bytes(os.urandom(8), 'big')
+
         for k in range(self.n_episodes):
-            key = jax.random.PRNGKey(self.env.samples * (k + 1))
+            #key = jax.random.PRNGKey(self.env.samples * (k + 1)) # DETERMINISTIC!!!!!
+            key = jax.random.PRNGKey(seed * self.env.samples * (k + 1))
 
             self.env.reset()
             jenv = self.env.jax()
