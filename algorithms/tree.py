@@ -32,6 +32,7 @@ class PGMCTS(Algorithm):
         self.config['depth'] = self.d
         self.config['episodes'] = self.n_episodes
         self.config['rollouts'] = self.M_l
+        self.config['seed'] = self.seed
     
 
     # Plays a certain number of episodes to estimate the value function
