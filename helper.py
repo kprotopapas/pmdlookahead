@@ -43,6 +43,7 @@ def parse_args():
     parser.add_argument('--lr', '-l', type=float, default=0.1)
     parser.add_argument('--exact', action='store_true')
     parser.add_argument('-d', type=int, default=1)
+    parser.add_argument('--simulations', type=int)
 
     parser.add_argument('--wandb', action='store_true')
     parser.add_argument('--group', type=str)
