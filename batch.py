@@ -2,24 +2,10 @@ import os
 import subprocess
 import argparse
 import time
+from helper import parse_args
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog='PMD TS runner', description='Runner for PMD TS', epilog='')
-    parser.add_argument('file', type=str)
-    parser.add_argument('--size', '-s', type=int, default=32)
-    parser.add_argument('--horizon', '-t', type=int, default=25)
-
-    parser.add_argument('--n_agents', '-n', type=int, default=10)
-    parser.add_argument('--alg', '-a', type=str, default='DPQA')
-    parser.add_argument('--epochs', type=int, default=200)
-    parser.add_argument('--lr', '-l', type=float, default=0.1)
-    parser.add_argument('--exact', action='store_true')
-    parser.add_argument('-d', type=int, default=1)
-
-    parser.add_argument('--group', type=str, default='delete')
-
-
-    args = parser.parse_args()
+    args = parse_args()
 
     file = args.file
 

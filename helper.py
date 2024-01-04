@@ -30,8 +30,10 @@ def logsumexp(t, axis=1):
     return np.log(np.sum(np.exp(t), axis=axis))
 
 
-def parse_args():
+def parse_args(file=False):
     parser = argparse.ArgumentParser(prog='PMD TS runner', description='Runner for PMD TS', epilog='')
+    if file:
+        parser.add_argument('file', type=str)
     parser.add_argument('--env_name', type=str, default='Gridworld')
     parser.add_argument('--size', '-s', type=int, default=32)
     parser.add_argument('--horizon', '-t', type=int, default=25)
