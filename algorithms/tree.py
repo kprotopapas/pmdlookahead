@@ -37,7 +37,7 @@ class PGMCTS(Algorithm):
         grad = jnp.zeros((self.env.R.shape))
         visits = jnp.zeros((grad.shape[0], ))
 
-        seed = int.from_bytes(os.urandom(8), 'big')
+        seed = int.from_bytes(os.urandom(2), 'big')
 
         for k in range(self.n_episodes):
             #key = jax.random.PRNGKey(self.env.samples * (k + 1)) # DETERMINISTIC!!!!!
