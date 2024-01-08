@@ -41,6 +41,8 @@ def parse_alg(alg: str):
             return EQA
         case 'PGMCTS':
             return PGMCTS
+        case 'PI':
+            return PolicyIteration
 
 
 if __name__ == '__main__':
