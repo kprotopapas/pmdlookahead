@@ -19,6 +19,7 @@ if __name__ == '__main__':
     d = args.d
     nsims = args.simulations
     simstring = '' if nsims is None else f'--simulations {nsims}'
+    exact = '--exact' if args.exact else ''
     
     group = args.group
 
@@ -40,7 +41,7 @@ if __name__ == '__main__':
 module load gcc/8.2.0 python/3.10.4
 source cluster-venv/bin/activate
 wandb offline
-python {file}.py --alg {alg} -n 1 -s {size} -t {horizon} --epochs {epochs} --wandb --group {group} -d {d} {simstring} --seed {i + 1}
+python {file}.py --alg {alg} -n 1 -s {size} -t {horizon} --epochs {epochs} --wandb --group {group} -d {d} {simstring} {exact} --seed {i + 1}
 """
         
         with open(f'script_{d}_{i}', 'w') as f:
