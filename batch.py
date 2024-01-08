@@ -44,10 +44,11 @@ wandb offline
 python {file}.py --alg {alg} -n 1 -s {size} -t {horizon} --epochs {epochs} --wandb --group {group} -d {d} {simstring} {exact} --seed {i + 1}
 """
         
-        with open(f'script_{d}_{i}', 'w') as f:
+        filename = f'script_{d}_{i}_{alg}'
+        with open(filename, 'w') as f:
             f.write(script)
         
-        subprocess.run(['sbatch', f'script_{d}_{i}'])
+        subprocess.run(['sbatch', filename])
 
         time.sleep(0.1)
-        os.remove(f'script_{d}_{i}')
+        os.remove(filename)
