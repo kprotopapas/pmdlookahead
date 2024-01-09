@@ -368,7 +368,7 @@ class DEQA(DPMD):
 
 
 class DPQA(DPMD):
-    def __init__(self, env: Tabular, horizon: int, M_l: int, d: int = 1, M_t: int = None, M_f: int = None):
+    def __init__(self, env: Tabular, horizon: int, M_l: int = None, d: int = 1, M_t: int = None, M_f: int = None):
         pi = DirectPolicy(env.observation_space, env.action_space)
         name = f'{d}-PQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
