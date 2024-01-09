@@ -12,8 +12,10 @@ from algorithms.baselines import *
 from helper import random_simplex, parse_args
 
 def run(d=1):
-    if alg in [DPQA, DEQA, PGMCTS]:
+    if alg == PGMCTS:
         agent = alg(env, horizon=H, d=d, M_t=M_t, seed=seed) # time per iteration 0.3 s
+    elif alg in [DPQA, DEQA]:
+        agent = alg(env, horizon=H, d=d, M_t=M_t)
     else:
         agent = alg(env, horizon=H, n_trajectories=1) # time per iteration 0.008 s
         
