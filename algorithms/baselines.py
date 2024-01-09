@@ -200,6 +200,17 @@ class PQA(Algorithm):
         pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, n_trajectories, pi, 'PQA')
 
+
+    def estimate_value(self):
+        Q = np.zeros_like(self.env.R)
+        self.env.reset()
+        states, actions, rewards = self.sample_trajectory()
+        rtg = self.env.rtg(rewards)
+        for s, a, r in zip(states, actions, rtg):
+            Q[s, a] += r # or maybe average???
+
+        return Q
+
     
     def grad_exact(self, Q):
         return Q
@@ -225,7 +236,6 @@ class EQA(Algorithm):
         super().__init__(env, horizon, n_trajectories, pi, 'EQA')
 
 
-
     def estimate_value(self):
         Q = np.zeros_like(self.env.R)
         self.env.reset()
@@ -242,7 +252,6 @@ class EQA(Algorithm):
 
 
     def lrk(self, lr, k, gradient):
-        return (lr(k) if callable(lr) else lr, 0)
         greedy = 1 * (gradient == gradient.max(axis=1)[..., np.newaxis])
         greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
         pk = self.pi.probas
@@ -345,10 +354,6 @@ class DPMD(Algorithm):
                     Q[s, a] = r + self.gamma * V[sp]
 
         return np.max(Q, axis=1)
-    
-
-    def diagnostics(self):
-        pass
 
 
 class DEQA(DPMD):
