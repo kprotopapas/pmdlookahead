@@ -319,7 +319,7 @@ class DPMD(Algorithm):
         if dk == 0: # CONVERGED! V* = TV*
             return 0, 0
 
-        lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d)
+        lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1))# * self.d) #TODO MAKE adaptive
         if np.isinf(lrk) or np.isnan(lrk):
             lrk = np.inf
         return lrk, dk
