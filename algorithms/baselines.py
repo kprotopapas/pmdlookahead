@@ -42,7 +42,7 @@ class Algorithm(object):
             for key, value in self.config.items():
                 config[key] = value
         
-            run = wandb.init(project="rl_experiments", config=config, group=group)
+            run = wandb.init(project="rl_experiments", config=config, group=group, entity='kprotopapas')
 
         V_opt = self.env.optimal().max(axis=1)
         V = self.env.V(self.pi)
