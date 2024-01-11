@@ -1,9 +1,10 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
+from gymnax.environments.environment import Environment
 
 from algorithms.policies import Policy
-from environments.jym import JEnv, JDeepsea, JTrap
+from environments.jym import JDeepsea, JTrap
 
 
 class Tabular(gym.Env):
@@ -140,7 +141,7 @@ class Tabular(gym.Env):
         return np.cumsum((discounts * rewards)[::-1])[::-1].copy()
     
 
-    def jax(self) -> JEnv:
+    def jax(self) -> Environment:
         pass
 
 
@@ -187,8 +188,8 @@ class Trap(Tabular):
         super().__init__(P, R, mu, gamma, name=name)
 
 
-    def jax(self) -> JEnv:
-        return JTrap(size=self.size, gamma=self.gamma)
+    def jax(self) -> Environment:
+        return JTrap(self.size, self.gamma)
 
 
     def __str__(self):
@@ -310,8 +311,8 @@ class Deepsea(Tabular):
         return str(grid_str)
 
 
-    def jax(self) -> JEnv:
-        return JDeepsea(size=self.size, gamma=self.gamma)
+    def jax(self) -> Environment:
+        return JDeepsea(self.size, self.gamma)
     
 
 class Cliffwalk(Tabular):

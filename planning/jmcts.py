@@ -5,53 +5,45 @@ from jax import numpy as jnp
 import mctx
 from mctx import PolicyOutput
 
-from typing import Optional, Any
-
-from mctx._src.search import Tree, expand, backward, simulate ,instantiate_tree_from_root
-from mctx._src.policies import _apply_temperature, _get_logits_from_probs, _add_dirichlet_noise, _mask_invalid_actions
-from mctx._src import action_selection
-from mctx._src import base
-from mctx._src import qtransforms
-from mctx._src import search
-from mctx._src import seq_halving
-
 from functools import partial as par
 from algorithms.policies import JPolicy
 
-from environments.jym import *
+from gymnax.environments.environment import EnvState, EnvParams, Environment
 from environments.solvable import *
 from algorithms.policies import *
 
 
-@jax.jit
-def rollout(env: JEnv, rng_key: chex.PRNGKey, pi: JPolicy) -> Reward:
-    reward_so_far = env.reward
-
-    def cond(a: tuple[JEnv, chex.PRNGKey]) -> jnp.bool_:
-        env, key = a
-        return ~env.done
+@jax.jit(static_argnums=(0,))
+def rollout(env: Environment, params: EnvParams, obs: chex.Array, state: EnvState, rng_key: chex.PRNGKey, pi: JPolicy
+            ) -> float:
+    def cond(a: tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_]) -> jnp.bool_:
+        reward, obs, state, key, done = a
+        return ~done
     
-    def step(a: tuple[JEnv, chex.PRNGKey]) -> tuple[JEnv, chex.PRNGKey]:
-        env, key = a
+    def step(a: tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_]
+             ) -> tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_]:
+        cumulative, obs, state, key, done = a
         key, subkey = jax.random.split(key)
-        action = jax.random.categorical(subkey, pi.act(env))
-        env, reward, done = env.step(action)
-        return env, key
+        action = jax.random.categorical(subkey, pi.act(obs))
+        new_obs, new_state, reward, done, _ = env.step(subkey, state, action, None)
+        return cumulative, obs, new_state, key, done
     
-    leaf, key = jax.lax.while_loop(cond, step, (env, rng_key))
+    key, action_key = jax.random.split(rng_key)
     
-    return leaf.reward - reward_so_far
+    reward, leaf_obs, leaf_state, key, done = jax.lax.while_loop(cond, step, (0, obs, state, action_key, False))
+    
+    return reward
 
 
 @par(jax.jit, static_argnums=(0,))
-def value_function(rollouts: int, val_pi: JPolicy, env: JEnv, rng_key: chex.PRNGKey) -> chex.Array:
+def value_function(rollouts: int, val_pi: JPolicy, env: Environment, rng_key: chex.PRNGKey) -> chex.Array:
     keys = jax.random.split(rng_key, rollouts)
     rolls = jax.vmap(rollout, (None, 0, None))(env, keys, val_pi)
     return jnp.mean(rolls)
 
 
 @par(jax.jit, static_argnums=(0,))
-def root_fn(rollouts: int, val_pi: JPolicy, env: JEnv, rng_key: chex.PRNGKey) -> mctx.RootFnOutput:
+def root_fn(rollouts: int, val_pi: JPolicy, env: Environment, rng_key: chex.PRNGKey) -> mctx.RootFnOutput:
     return mctx.RootFnOutput(
         prior_logits = jnp.zeros((2,)),
         value = value_function(rollouts, val_pi, env, rng_key),
@@ -61,7 +53,7 @@ def root_fn(rollouts: int, val_pi: JPolicy, env: JEnv, rng_key: chex.PRNGKey) ->
 
 @par(jax.jit, static_argnums=(0,))
 def recurrent_fn(rollouts: int, val_pi: JPolicy, params, 
-                 rng_key: chex.PRNGKey, action: Action, embedding: JEnv) -> mctx.RecurrentFnOutput:
+                 rng_key: chex.PRNGKey, action: chex.Array, embedding: Environment) -> mctx.RecurrentFnOutput:
     # Extract the environment from the embedding.
     env = embedding
     discount = env.gamma
