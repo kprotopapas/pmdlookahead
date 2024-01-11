@@ -33,7 +33,7 @@ if __name__ == '__main__':
         f"""#!/bin/bash
 #SBATCH -n 4
 #SBATCH --mem-per-cpu=2G
-#SBATCH --time=20:00
+#SBATCH --time=30:00
 #SBATCH --job-name={group}/{d}/{i}
 #SBATCH --output=runs/{group}_{d}/{i}/output.out
 #SBATCH --error=runs/{group}_{d}/{i}/error.err
