@@ -28,7 +28,7 @@ jenv = JDeepsea(size=size, gamma=gamma)
 embedding = lambda state: state[0] * size + state[1]
 jpolicy = JSoftmaxPolicy.uniform(env.n_obs, env.n_act, embedding=embedding)
 
-pgmcts = PGMCTS(policy=jpolicy, depth=depth, n_sims=500, M_l=16)
+pgmcts = PGMCTS(policy=jpolicy, depth=depth, n_sims=500, rollouts=16)
 
 
 def callback(jpolicy: JSoftmaxPolicy):

@@ -13,9 +13,9 @@ from helper import random_simplex, parse_args
 
 def run(d=1):
     if alg == PGMCTS:
-        agent = alg(env, horizon=H, d=d, M_t=M_t, seed=seed) # time per iteration 0.3 s
+        agent = alg(env, horizon=H, d=d, simulations=sims, seed=seed) # time per iteration 0.3 s
     elif alg in [DPQA, DEQA]:
-        agent = alg(env, horizon=H, d=d, M_t=M_t, M_l=None)
+        agent = alg(env, horizon=5, d=d, M_t=1, M_l=1, M_f=1)
     else:
         agent = alg(env, horizon=H, n_trajectories=1) # time per iteration 0.008 s
         
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     lr = args.lr
     epochs = args.epochs
     d = args.d
-    M_t = args.simulations
+    sims = args.simulations
     seed = args.seed
 
     P = random_simplex((size, size, 4))
