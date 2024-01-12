@@ -20,7 +20,7 @@ M_l = 16
 
 
 size = 16
-depth = 10
+depth = 6
 gamma = 0.99
 env = Deepsea(size, gamma)
 jenv = JDeepsea(size=size, gamma=gamma)
@@ -28,7 +28,7 @@ key = jax.random.PRNGKey(42)
 params = None
 obs, state = jenv.reset(key, None)
 
-for i in range(6):
+for i in range(10):
     obs, state, _, _, _ = jenv.step(key, state, 1, params)
     env.step(1)
 

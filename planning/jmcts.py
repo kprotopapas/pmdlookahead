@@ -41,6 +41,7 @@ def value_function(rollouts: int, val_pi: JPolicy, env: Environment, params: Env
     return jnp.mean(rolls)
 
 
+@par(jax.jit, static_argnums=(0, 2, 3, 4))
 def root_fn(rollouts: int, val_pi: JPolicy, env: Environment, params: EnvParams,
             gamma: float, obs: chex.Array, state: EnvState, rng_key: chex.PRNGKey) -> mctx.RootFnOutput:
     return mctx.RootFnOutput(
@@ -50,6 +51,7 @@ def root_fn(rollouts: int, val_pi: JPolicy, env: Environment, params: EnvParams,
     )
 
 
+@par(jax.jit, static_argnums=(0, 2, 3, 4))
 def recurrent_fn(rollouts: int, val_pi: JPolicy, env: Environment, env_params: EnvParams, gamma: float,
                  params, rng_key: chex.PRNGKey,
                  action: chex.Array, embedding: tuple[chex.Array, EnvState]) -> mctx.RecurrentFnOutput:
@@ -93,8 +95,7 @@ def run_mcts(env: Environment,
     root_jit = jax.jit(par(root_fn, rollouts, val_pi, env, params, gamma))
     root = jax.vmap(root_jit, (None, None, 0))(obs, state, jax.random.split(key2, batch_size))
 
-    rfn_jit = jax.jit(recurrent_fn, static_argnums=(0, 2, 3))
-    par_rfn_jit = jax.jit(par(rfn_jit, rollouts, val_pi, env, params, gamma))
+    par_rfn_jit = jax.jit(par(recurrent_fn, rollouts, val_pi, env, params, gamma))
     rf = jax.vmap(par_rfn_jit, (None, None, 0, 0))  
 
     #policy = jax.jit(mctx.muzero_policy, static_argnames=('temperature', 'recurrent_fn', 'num_simulations', 'loop_fn', 'qtransform', 'max_depth', 'dirichlet_fraction', 'dirichlet_alpha', 'pb_c_init', 'pb_c_base'))
@@ -106,7 +107,7 @@ def run_mcts(env: Environment,
         recurrent_fn=rf,
         num_simulations=num_simulations,
         max_depth=depth,
-        qtransform=par(mctx.qtransform_by_min_max, min_value=-1, max_value=1),
+        #qtransform=par(mctx.qtransform_by_min_max, min_value=-1, max_value=1),
         pb_c_init=1.21
     )
     return policy_output
