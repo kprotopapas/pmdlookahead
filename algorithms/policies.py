@@ -5,14 +5,13 @@ from typing import Callable
 import numpy as np
 from jax import numpy as jnp
 
-from environments.jym import JEnv
 from helper import *
 
 
 @chex.dataclass(kw_only=True)
 class JPolicy(object):
     # Returns logits associated with current 
-    def act(self, env: JEnv) -> chex.Array:
+    def act(self, obs: chex.Array) -> chex.Array:
         pass
 
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
@@ -93,8 +92,8 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
     logits: chex.Array
     embedding: chex.Array = jnp.ones((1,))
 
-    def act(self, env: JEnv) -> chex.Array:
-        state = jnp.dot(self.embedding, env.state)
+    def act(self, obs: chex.Array) -> chex.Array:
+        state = jnp.dot(self.embedding, obs)
         return self.logits[state]
 
 

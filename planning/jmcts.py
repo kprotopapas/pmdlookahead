@@ -13,7 +13,6 @@ from environments.solvable import *
 from algorithms.policies import *
 
 
-@jax.jit(static_argnums=(0,))
 def rollout(env: Environment, params: EnvParams, obs: chex.Array, state: EnvState, rng_key: chex.PRNGKey, pi: JPolicy
             ) -> float:
     def cond(a: tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_]) -> jnp.bool_:
@@ -25,7 +24,7 @@ def rollout(env: Environment, params: EnvParams, obs: chex.Array, state: EnvStat
         cumulative, obs, state, key, done = a
         key, subkey = jax.random.split(key)
         action = jax.random.categorical(subkey, pi.act(obs))
-        new_obs, new_state, reward, done, _ = env.step(subkey, state, action, None)
+        new_obs, new_state, reward, done, _ = env.step(subkey, state, action, params)
         return cumulative, obs, new_state, key, done
     
     key, action_key = jax.random.split(rng_key)
@@ -35,10 +34,11 @@ def rollout(env: Environment, params: EnvParams, obs: chex.Array, state: EnvStat
     return reward
 
 
-@par(jax.jit, static_argnums=(0,))
-def value_function(rollouts: int, val_pi: JPolicy, env: Environment, rng_key: chex.PRNGKey) -> chex.Array:
+@par(jax.jit, static_argnums=(0,2,3))
+def value_function(rollouts: int, val_pi: JPolicy, env: Environment, params: EnvParams,
+                   obs: chex.Array, state: EnvState, rng_key: chex.PRNGKey) -> chex.Array:
     keys = jax.random.split(rng_key, rollouts)
-    rolls = jax.vmap(rollout, (None, 0, None))(env, keys, val_pi)
+    rolls = jax.vmap(rollout, (None, None, None, None, 0, None))(env, params, obs, state, keys, val_pi)
     return jnp.mean(rolls)
 
 
@@ -78,7 +78,7 @@ def recurrent_fn(rollouts: int, val_pi: JPolicy, params,
 
 @par(jax.jit, static_argnums=(3, 4, 5))
 def run_mcts(rng_key: chex.PRNGKey,
-             env: JEnv,
+             env: Environment,
              val_pi: JPolicy,
              depth: int,
              num_simulations: int,

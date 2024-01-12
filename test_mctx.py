@@ -24,35 +24,38 @@ depth = 10
 gamma = 0.99
 env = Deepsea(size, gamma)
 jenv = JDeepsea(size=size, gamma=gamma)
+key = jax.random.PRNGKey(42)
+params = None
+obs, state = jenv.reset(key, None)
 
 for i in range(6):
-    jenv, _, _ = jenv.step(1)
+    obs, state, _, _, _ = jenv.step(key, state, 1, params)
     env.step(1)
 
 
 jpolicy = JSoftmaxPolicy.uniform(env.n_obs, env.n_act, jenv.embedding)
-policy = SoftmaxPolicy(env.observation_space.n, env.action_space.n)
+policy = SoftmaxPolicy(env.n_obs, env.n_act)
 
 Q = env.Q(policy)
 V = env.V(policy)
 JV = jnp.array(V)
 
-right, rright, _ = jenv.step(1)
-left, rleft, _ = jenv.step(0)
+oright, sright, rright, _, _ = jenv.step(key, state, 1, params)
+oleft, sleft, rleft, _, _ = jenv.step(key, state, 0, params)
 
 key = jax.random.PRNGKey(42)
 
-vright = value_function(M_l, jpolicy, right, key)
-vleft = value_function(M_l, jpolicy, left, key)
-
+vright = value_function(M_l, jpolicy, jenv, params, oright, sright, key)
+vleft = value_function(M_l, jpolicy, jenv, params, oleft, sleft, key)
 
 print('State')
-print(jenv.state)
+print(state)
 
 print('Real vs approx Q function')
 print(Q[env.state])
 print(np.array([rleft + gamma * vleft, rright + gamma * vright]))
 
+exit(1)
 tdm = V
 for _ in range(depth - 1):
     tdm = env.bellman(tdm)
