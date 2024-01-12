@@ -93,7 +93,7 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
     embedding: chex.Array = jnp.ones((1,))
 
     def act(self, obs: chex.Array) -> chex.Array:
-        state = jnp.dot(self.embedding, obs)
+        state = jnp.sum(obs * self.embedding).astype(jnp.int32)
         return self.logits[state]
 
 

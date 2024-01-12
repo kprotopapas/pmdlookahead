@@ -60,16 +60,18 @@ def recurrent_fn(rollouts: int, val_pi: JPolicy, env: Environment, env_params: E
 
     # Play the action.
     new_obs, new_state, reward, done, _ = env.step(rng_key, state, action, env_params)
+    vf = value_function(rollouts, val_pi, env, env_params, gamma, obs, state, rng_key).astype(jnp.float32)
+    value = jnp.where(done, 0, vf)
     # Create the new MCTS node.
     recurrent_fn_output = mctx.RecurrentFnOutput(
         # reward for playing `action`
         reward=reward,
         # discount explained in the next section
-        discount=gamma,
+        discount=jnp.where(done, 0, gamma),
         # prior for the new state
         prior_logits=jnp.zeros((env.num_actions,)),
         # value for the new state
-        value=value_function(rollouts, val_pi, env, env_params, gamma, obs, state, rng_key).astype(jnp.float32),
+        value=value,
     )
     new_embedding = (new_obs, new_state)
 

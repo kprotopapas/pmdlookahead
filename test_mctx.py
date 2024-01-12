@@ -9,31 +9,36 @@ from environments.solvable import *
 from algorithms.policies import *
 from planning.jmcts import *
 from helper import *
+import gymnax
 
 import wandb
 
 args = parse_args()
 group = args.group
 depth = args.d
-N = 2048
+N = 50
 M_l = 128
 
 
 size = 16
 depth = 8
 gamma = 0.99
+key = jax.random.PRNGKey(42)
+
 env = Deepsea(size, gamma)
 jenv = JDeepsea(size=size, gamma=gamma)
-key = jax.random.PRNGKey(42)
 params = None
-obs, state = jenv.reset(key, None)
 
-for i in range(8):
+jenv, params = gymnax.make('DeepSea-bsuite', size=size)
+obs, state = jenv.reset(key, params)
+
+for i in range(12):
     obs, state, _, _, _ = jenv.step(key, state, 1, params)
     env.step(1)
 
 
-jpolicy = JSoftmaxPolicy.uniform(env.n_obs, env.n_act, jenv.embedding)
+embedding = jnp.arange(size**2, dtype=jnp.int32).reshape((size, size))
+jpolicy = JSoftmaxPolicy.uniform(env.n_obs, env.n_act, embedding)
 policy = SoftmaxPolicy(env.n_obs, env.n_act)
 
 Q = env.Q(policy)
@@ -90,7 +95,7 @@ start = time.time()
 
 print(f'Running with {N} simulations')
 lookahead: PolicyOutput = run_mcts(jenv, params, depth, N, M_l, gamma, key, obs, state, jpolicy)
-Q_hat = jenv.gamma * lookahead.search_tree.children_values[0, 0] + lookahead.search_tree.children_rewards[0, 0]
+Q_hat = gamma * lookahead.search_tree.children_values[0, 0] + lookahead.search_tree.children_rewards[0, 0]
 print(f'Total ran in {time.time() - start} seconds')
 print()
 print('Real vs approx Q_d function')
