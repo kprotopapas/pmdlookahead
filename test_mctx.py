@@ -45,8 +45,9 @@ oleft, sleft, rleft, _, _ = jenv.step(key, state, 0, params)
 
 key = jax.random.PRNGKey(42)
 
-vright = value_function(M_l, jpolicy, jenv, params, oright, sright, key)
-vleft = value_function(M_l, jpolicy, jenv, params, oleft, sleft, key)
+
+vright = value_function(M_l, jpolicy, jenv, params, gamma, oright, sright, key)
+vleft = value_function(M_l, jpolicy, jenv, params, gamma, oleft, sleft, key)
 
 print('State')
 print(state)

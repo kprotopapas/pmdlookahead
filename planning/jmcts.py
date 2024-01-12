@@ -13,36 +13,34 @@ from environments.solvable import *
 from algorithms.policies import *
 
 
-def rollout(env: Environment, params: EnvParams, obs: chex.Array, state: EnvState, rng_key: chex.PRNGKey, pi: JPolicy
+def rollout(env: Environment, params: EnvParams, gamma: float,
+            obs: chex.Array, state: EnvState, rng_key: chex.PRNGKey, pi: JPolicy
             ) -> float:
-    def cond(a: tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_]) -> jnp.bool_:
-        reward, obs, state, key, done = a
+    def cond(a: tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_, int]) -> jnp.bool_:
+        reward, obs, state, key, done, t = a
         return ~done
     
-    def step(a: tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_]
-             ) -> tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_]:
-        cumulative, obs, state, key, done = a
+    def step(a: tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_, int]
+             ) -> tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_, int]:
+        cumulative, obs, state, key, done, t = a
         key, subkey = jax.random.split(key)
         action = jax.random.categorical(subkey, pi.act(obs))
         new_obs, new_state, reward, done, _ = env.step(subkey, state, action, params)
-        return cumulative, obs, new_state, key, done
-    
-    key, action_key = jax.random.split(rng_key)
-    
-    reward, leaf_obs, leaf_state, key, done = jax.lax.while_loop(cond, step, (0, obs, state, action_key, False))
+        cumulative += reward * gamma**t
+        return cumulative, obs, new_state, key, done, t + 1
+        
+    reward, leaf_obs, leaf_state, key, done, t = jax.lax.while_loop(cond, step, (0, obs, state, rng_key, False, 0))
     
     return reward
 
 
-@par(jax.jit, static_argnums=(0,2,3))
-def value_function(rollouts: int, val_pi: JPolicy, env: Environment, params: EnvParams,
+def value_function(rollouts: int, val_pi: JPolicy, env: Environment, params: EnvParams, gamma: float,
                    obs: chex.Array, state: EnvState, rng_key: chex.PRNGKey) -> chex.Array:
     keys = jax.random.split(rng_key, rollouts)
-    rolls = jax.vmap(rollout, (None, None, None, None, 0, None))(env, params, obs, state, keys, val_pi)
+    rolls = jax.vmap(rollout, (None, None, None, None, None, 0, None))(env, params, gamma, obs, state, keys, val_pi)
     return jnp.mean(rolls)
 
 
-@par(jax.jit, static_argnums=(0,))
 def root_fn(rollouts: int, val_pi: JPolicy, env: Environment, rng_key: chex.PRNGKey) -> mctx.RootFnOutput:
     return mctx.RootFnOutput(
         prior_logits = jnp.zeros((2,)),
@@ -51,7 +49,6 @@ def root_fn(rollouts: int, val_pi: JPolicy, env: Environment, rng_key: chex.PRNG
     )
 
 
-@par(jax.jit, static_argnums=(0,))
 def recurrent_fn(rollouts: int, val_pi: JPolicy, params, 
                  rng_key: chex.PRNGKey, action: chex.Array, embedding: Environment) -> mctx.RecurrentFnOutput:
     # Extract the environment from the embedding.
