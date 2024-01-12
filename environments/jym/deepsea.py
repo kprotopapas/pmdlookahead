@@ -44,11 +44,13 @@ class JDeepsea(Environment):
         dx = jnp.where(done, 0, action * 2 - 1)
 
         newpos = jnp.clip(jnp.array([position[0] + 1, position[1] + dx]), 0, env.size - 1)
-        done = newpos[0] == env.size - 1
         right_penalty = -0.1 * env.gamma**env.size / env.size
 
         reward = action * jnp.where(newpos[1] == env.size - 1, 1, right_penalty)
+
         reward = jnp.where(done, 0, reward)
+        
+        done = newpos[0] == env.size - 1
         cumulative = state.reward + reward * self.gamma**position[0]
         new_state = EnvState(newpos, cumulative)
 

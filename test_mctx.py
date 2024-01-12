@@ -16,11 +16,11 @@ args = parse_args()
 group = args.group
 depth = args.d
 N = 2048
-M_l = 16
+M_l = 128
 
 
 size = 16
-depth = 6
+depth = 8
 gamma = 0.99
 env = Deepsea(size, gamma)
 jenv = JDeepsea(size=size, gamma=gamma)
@@ -28,7 +28,7 @@ key = jax.random.PRNGKey(42)
 params = None
 obs, state = jenv.reset(key, None)
 
-for i in range(10):
+for i in range(8):
     obs, state, _, _, _ = jenv.step(key, state, 1, params)
     env.step(1)
 
@@ -54,22 +54,29 @@ vleft = vf(M_l, jpolicy, jenv, params, gamma, oleft, sleft, key)
 
 print('State')
 print(state)
-
+print()
 print('Real vs approx Q function')
 print(Q[env.state])
 print(np.array([rleft + gamma * vleft, rright + gamma * vright]))
-
+print()
 root = jax.jit(root_fn, static_argnums=(0, 2, 3))
-a = root(M_l, jpolicy, jenv, params, gamma, obs, state, key)
+rt = root(M_l, jpolicy, jenv, params, gamma, obs, state, key)
 
 recur = jax.jit(recurrent_fn, static_argnums=(0, 2, 3,))
 precur = par(recur, M_l, jpolicy, jenv, params, gamma)
 final = jax.jit(precur)
-b = final(None, key, 1, (obs, state))
+rfr = final(None, key, 1, (obs, state))
+rfl = final(None, key, 0, (obs, state))
+print('Root function')
+print(rt)
+print()
 
-temp = a
-a = b
-b = temp
+print('Recurrent Function Right')
+print(rfr)
+print()
+print('Recurrent Function Left')
+print(rfl)
+print()
 
 tdm = V
 for _ in range(depth - 1):
@@ -82,7 +89,7 @@ Q_d = env.R + gamma * next_V
 start = time.time()
 
 print(f'Running with {N} simulations')
-lookahead: PolicyOutput = run_mcts(jenv, params, gamma, depth, N, M_l, key, obs, state, jpolicy)
+lookahead: PolicyOutput = run_mcts(jenv, params, depth, N, M_l, gamma, key, obs, state, jpolicy)
 Q_hat = jenv.gamma * lookahead.search_tree.children_values[0, 0] + lookahead.search_tree.children_rewards[0, 0]
 print(f'Total ran in {time.time() - start} seconds')
 print()
@@ -95,13 +102,14 @@ print()
 
 print('Running again')
 start = time.time()
-lookahead2: PolicyOutput = run_mcts(jenv, params, gamma, depth, N, M_l, key, obs, state, jpolicy)
+lookahead2: PolicyOutput = run_mcts(jenv, params, depth, N, M_l, gamma, key, obs, state, jpolicy)
 print(f'Took {time.time() - start} seconds')
 
 print()
 print('Running again')
 start = time.time()
-lookahead2: PolicyOutput = run_mcts(jenv, params, gamma, depth, N, M_l, key, obs, state, jpolicy)
+lookahead2: PolicyOutput = run_mcts(jenv, params, depth, N, M_l, gamma, key, obs, state, jpolicy)
 print(f'Took {time.time() - start} seconds')
 
+pass
 # TODO SUBTREEEEEEEES

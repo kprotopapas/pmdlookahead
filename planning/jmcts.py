@@ -89,11 +89,11 @@ def run_mcts(env: Environment,
              state: EnvState,
              val_pi: JPolicy) -> PolicyOutput:
     
-    key1, key2 = jax.random.split(rng_key)
+    tree_key, value_key = jax.random.split(rng_key)
 
     batch_size = 1
     root_jit = jax.jit(par(root_fn, rollouts, val_pi, env, params, gamma))
-    root = jax.vmap(root_jit, (None, None, 0))(obs, state, jax.random.split(key2, batch_size))
+    root = jax.vmap(root_jit, (None, None, 0))(obs, state, jax.random.split(value_key, batch_size))
 
     par_rfn_jit = jax.jit(par(recurrent_fn, rollouts, val_pi, env, params, gamma))
     rf = jax.vmap(par_rfn_jit, (None, None, 0, 0))  
@@ -102,12 +102,12 @@ def run_mcts(env: Environment,
     
     policy_output = mctx.muzero_policy(
         params=None,
-        rng_key=key1,
+        rng_key=tree_key,
         root=root,
         recurrent_fn=rf,
         num_simulations=num_simulations,
         max_depth=depth,
-        #qtransform=par(mctx.qtransform_by_min_max, min_value=-1, max_value=1),
+        qtransform=par(mctx.qtransform_by_min_max, min_value=-1, max_value=1),
         pb_c_init=1.21
     )
     return policy_output
