@@ -58,3 +58,7 @@ class JDeepsea(Environment):
     @property
     def embedding(self) -> chex.Array:
         return jnp.array([self.size, 1])
+    
+    @property
+    def num_actions(self) -> int:
+        return 2

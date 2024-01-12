@@ -16,7 +16,7 @@ args = parse_args()
 group = args.group
 depth = args.d
 N = 2048
-M_l = 128
+M_l = 16
 
 
 size = 16
@@ -46,8 +46,11 @@ oleft, sleft, rleft, _, _ = jenv.step(key, state, 0, params)
 key = jax.random.PRNGKey(42)
 
 
-vright = value_function(M_l, jpolicy, jenv, params, gamma, oright, sright, key)
-vleft = value_function(M_l, jpolicy, jenv, params, gamma, oleft, sleft, key)
+vf = jax.jit(value_function, static_argnums=(0, 2, 3))
+
+vright = vf(M_l, jpolicy, jenv, params, gamma, oright, sright, key)
+vleft = vf(M_l, jpolicy, jenv, params, gamma, oleft, sleft, key)
+
 
 print('State')
 print(state)
@@ -56,7 +59,18 @@ print('Real vs approx Q function')
 print(Q[env.state])
 print(np.array([rleft + gamma * vleft, rright + gamma * vright]))
 
-exit(1)
+root = jax.jit(root_fn, static_argnums=(0, 2, 3))
+a = root(M_l, jpolicy, jenv, params, gamma, obs, state, key)
+
+recur = jax.jit(recurrent_fn, static_argnums=(0, 2, 3,))
+precur = par(recur, M_l, jpolicy, jenv, params, gamma)
+final = jax.jit(precur)
+b = final(None, key, 1, (obs, state))
+
+temp = a
+a = b
+b = temp
+
 tdm = V
 for _ in range(depth - 1):
     tdm = env.bellman(tdm)
@@ -68,7 +82,7 @@ Q_d = env.R + gamma * next_V
 start = time.time()
 
 print(f'Running with {N} simulations')
-lookahead: PolicyOutput = run_mcts(key, jenv, jpolicy, depth, N, M_l)
+lookahead: PolicyOutput = run_mcts(jenv, params, gamma, depth, N, M_l, key, obs, state, jpolicy)
 Q_hat = jenv.gamma * lookahead.search_tree.children_values[0, 0] + lookahead.search_tree.children_rewards[0, 0]
 print(f'Total ran in {time.time() - start} seconds')
 print()
@@ -81,16 +95,13 @@ print()
 
 print('Running again')
 start = time.time()
-lookahead2: PolicyOutput = run_mcts(key, jenv, jpolicy, depth, N, M_l)
+lookahead2: PolicyOutput = run_mcts(jenv, params, gamma, depth, N, M_l, key, obs, state, jpolicy)
 print(f'Took {time.time() - start} seconds')
 
 print()
 print('Running again')
 start = time.time()
-lookahead2: PolicyOutput = run_mcts(key, jenv, jpolicy, depth, N, M_l)
+lookahead2: PolicyOutput = run_mcts(jenv, params, gamma, depth, N, M_l, key, obs, state, jpolicy)
 print(f'Took {time.time() - start} seconds')
-
-
-jenv = jenv.reset()
 
 # TODO SUBTREEEEEEEES

@@ -41,54 +41,61 @@ def value_function(rollouts: int, val_pi: JPolicy, env: Environment, params: Env
     return jnp.mean(rolls)
 
 
-def root_fn(rollouts: int, val_pi: JPolicy, env: Environment, rng_key: chex.PRNGKey) -> mctx.RootFnOutput:
+def root_fn(rollouts: int, val_pi: JPolicy, env: Environment, params: EnvParams,
+            gamma: float, obs: chex.Array, state: EnvState, rng_key: chex.PRNGKey) -> mctx.RootFnOutput:
     return mctx.RootFnOutput(
-        prior_logits = jnp.zeros((2,)),
-        value = value_function(rollouts, val_pi, env, rng_key),
-        embedding = env
+        prior_logits = jnp.zeros((env.num_actions,)),
+        value = value_function(rollouts, val_pi, env, params, gamma, obs, state, rng_key),
+        embedding = (obs, state)
     )
 
 
-def recurrent_fn(rollouts: int, val_pi: JPolicy, params, 
-                 rng_key: chex.PRNGKey, action: chex.Array, embedding: Environment) -> mctx.RecurrentFnOutput:
+def recurrent_fn(rollouts: int, val_pi: JPolicy, env: Environment, env_params: EnvParams, gamma: float,
+                 params, rng_key: chex.PRNGKey,
+                 action: chex.Array, embedding: tuple[chex.Array, EnvState]) -> mctx.RecurrentFnOutput:
     # Extract the environment from the embedding.
-    env = embedding
-    discount = env.gamma
+    obs, state = embedding
 
     # Play the action.
-    env, reward, done = env.step(action)
+    new_obs, new_state, reward, done, _ = env.step(rng_key, state, action, env_params)
     # Create the new MCTS node.
     recurrent_fn_output = mctx.RecurrentFnOutput(
         # reward for playing `action`
         reward=reward,
         # discount explained in the next section
-        discount=discount,
+        discount=gamma,
         # prior for the new state
-        prior_logits=jnp.zeros((2,)),
+        prior_logits=jnp.zeros((env.num_actions,)),
         # value for the new state
-        value=value_function(rollouts, val_pi, env, rng_key).astype(jnp.float32),
+        value=value_function(rollouts, val_pi, env, env_params, gamma, obs, state, rng_key).astype(jnp.float32),
     )
+    new_embedding = (new_obs, new_state)
 
-    # Return the new node and the new environment.
-    return recurrent_fn_output, env
+    # Return the new node and the new state.
+    return recurrent_fn_output, new_embedding
 
 
-@par(jax.jit, static_argnums=(3, 4, 5))
-def run_mcts(rng_key: chex.PRNGKey,
-             env: Environment,
-             val_pi: JPolicy,
+@par(jax.jit, static_argnums=range(5))
+def run_mcts(env: Environment,
+             params: EnvParams,
              depth: int,
              num_simulations: int,
-             rollouts: int) -> PolicyOutput:
+             rollouts: int,
+             gamma: float,
+             rng_key: chex.PRNGKey,
+             obs: chex.Array,
+             state: EnvState,
+             val_pi: JPolicy) -> PolicyOutput:
     
     key1, key2 = jax.random.split(rng_key)
 
     batch_size = 1
-    root_jit = jax.jit(par(root_fn, rollouts, val_pi))
-    root = jax.vmap(root_jit, (None, 0))(env, jax.random.split(key2, batch_size))
+    root_jit = jax.jit(par(root_fn, rollouts, val_pi, env, params, gamma))
+    root = jax.vmap(root_jit, (None, None, 0))(obs, state, jax.random.split(key2, batch_size))
 
-    rfn_jit = jax.jit(par(recurrent_fn, rollouts, val_pi))
-    rf = jax.vmap(rfn_jit, (None, None, 0, 0))  
+    rfn_jit = jax.jit(recurrent_fn, static_argnums=(0, 2, 3))
+    par_rfn_jit = jax.jit(par(rfn_jit, rollouts, val_pi, env, params, gamma))
+    rf = jax.vmap(par_rfn_jit, (None, None, 0, 0))  
 
     #policy = jax.jit(mctx.muzero_policy, static_argnames=('temperature', 'recurrent_fn', 'num_simulations', 'loop_fn', 'qtransform', 'max_depth', 'dirichlet_fraction', 'dirichlet_alpha', 'pb_c_init', 'pb_c_base'))
     
