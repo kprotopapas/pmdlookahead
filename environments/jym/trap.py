@@ -7,6 +7,8 @@ from functools import partial
 
 from gymnax.environments.environment import Environment
 
+from environments.jym.tabular import JTabular
+
 @struct.dataclass
 class EnvState:
     position: int
@@ -20,8 +22,9 @@ class EnvParams:
     pass
 
 
-class JTrap(Environment):
+class JTrap(JTabular):
     def __init__(self, size: int, gamma: float):
+        super().__init__(2 * size + 1, 2, gamma)
         self.size = size
         self.gamma = gamma
         self.reward_matrix: chex.Array = jnp.hstack([

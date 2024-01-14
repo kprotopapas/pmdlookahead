@@ -8,6 +8,8 @@ from gymnax.environments.environment import Environment
 import numpy as np
 from functools import partial
 
+from environments.jym.tabular import JTabular
+
 
 @struct.dataclass
 class EnvState:
@@ -20,9 +22,9 @@ class EnvParams:
     pass
 
 
-class JDeepsea(Environment):
+class JDeepsea(JTabular):
     def __init__(self, size: int, gamma: float):
-        super().__init__()
+        super().__init__(size**2, 2, gamma)
         self.size = size
         self.gamma = gamma
 
@@ -60,7 +62,3 @@ class JDeepsea(Environment):
     @property
     def embedding(self) -> chex.Array:
         return jnp.array([self.size, 1])
-    
-    @property
-    def num_actions(self) -> int:
-        return 2

@@ -10,12 +10,13 @@ from helper import *
 
 @chex.dataclass(kw_only=True)
 class JPolicy(object):
+    embedding = jnp.ones((1,))
     # Returns logits associated with current 
     def act(self, obs: chex.Array) -> chex.Array:
-        pass
+        raise NotImplementedError
 
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
-        pass
+        raise NotImplementedError
 
 
 class Policy:
@@ -90,20 +91,21 @@ class DirectPolicy(Policy):
 @chex.dataclass(kw_only=True)
 class JSoftmaxPolicy(JPolicy): # softmax policy
     logits: chex.Array
-    embedding: chex.Array = jnp.ones((1,))
 
     def act(self, obs: chex.Array) -> chex.Array:
         state = jnp.sum(obs * self.embedding).astype(jnp.int32)
         return self.logits[state]
 
 
-    def update(self, grad: chex.Array, lr: float) -> JPolicy:
-        grad = grad - grad.mean(axis=1)[..., jnp.newaxis] # center gradient before update
-        new = self.logits + lr * grad
-        new_centered = new - new.max(axis=1)[..., np.newaxis] # renormalize by max
+    def update(self, grad: chex.Array, ind: chex.Array, lr: float) -> JPolicy:
+        grad = grad - grad.mean() #  center gradient before update
+        
+        new = self.logits[ind] + lr * grad
+        new_centered = new - new.max() # renormalize by max
+        new_logits = logits.at[ind].set(new_centered)
 
-        argmax = jnp.where(grad == grad.max(axis=1)[..., jnp.newaxis], jnp.inf, -jnp.inf)
-        logits = jnp.where(jnp.isinf(lr), argmax, new_centered)
+        argmax = jnp.where(grad == grad.max(), jnp.inf, -jnp.inf)
+        logits = jnp.where(jnp.isinf(lr), argmax, new_logits)
 
         return JSoftmaxPolicy(embedding=self.embedding,
                                   logits=logits)
@@ -114,9 +116,8 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
 
 
     @staticmethod
-    def uniform(n_states: int, n_actions: int, embedding = lambda x: x) -> JSoftmaxPolicy:
+    def uniform(n_states: int, n_actions: int, embedding = jnp.ones((1,))) -> JSoftmaxPolicy:
         return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)), embedding=embedding)
-
 
 
 class SoftmaxPolicy(Policy):
