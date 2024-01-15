@@ -116,18 +116,16 @@ class JAlgorithm(object):
         _ = jax.lax.while_loop(cond, step, (0, False, obs, state))
 
         return observations, actions, rewards
-    
-    
-    def fit(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, k: int):
-        raise NotImplementedError
 
-    def estimate_value(self, key: chex.PRNGKey, env: Environment, params: EnvParams):
+
+    def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams):
         Q = jnp.array((env.n_states, env.num_actions))
 
         for s in range(env.n_states):
+            state = env.inverse(s)
             for a in range(env.n_actions):
                 for _ in range(self.n_trajectories):
-                    observations, actions, rewards = self.sample_trajectory(key, env, params, s, s, a)
+                    observations, actions, rewards = self.sample_trajectory(key, env, params, s, state, a)
                     rtg = self.reward_to_go(rewards)
                     Q = Q.at[s, a].add(rtg[0])
             
@@ -135,26 +133,22 @@ class JAlgorithm(object):
         Q = Q / self.n_trajectories
     
 
-    def lrk(self, k: int, gradient):
+    def lrk(self, gradient: chex.Array, k: int):
         raise NotImplementedError
     
     def grad(self, Q):
-        raise NotImplementedError
+        return Q
 
 
 class PolicyIteration(JAlgorithm):
     def __init__(self, gamma: float, horizon: int, n_trajectories: int, pi: JPolicy):
         super().__init__(gamma, horizon, n_trajectories, pi, 'PI')
+    
+
+    def lrk(self, k: int, gradient: chex.Array):
+        return jnp.inf
 
 
-    def fit(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, k: int):
-        Q = self.estimate_value(key, env, params)
-
-        self.pi = self.pi.update(Q, jnp.inf)
-
-        return Q, {}
-        
-        
 class REINFORCE(JAlgorithm):
     # Projected Policy Gradient Ascent using REINFORCE
     def __init__(self, gamma: float, horizon: int, n_trajectories: int, pi: JPolicy):
@@ -167,12 +161,7 @@ class PQA(JAlgorithm):
         super().__init__(gamma, horizon, n_trajectories, pi, 'PQA')
         
 
-    def fit(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, k: int):
-        states, actions, rewards = self.sample_trajectory(key, env, params)
-
-
-    
-    def lrk(self, lr, k, gradient):
+    def lrk(self, k: int, gradient: chex.Array):
         greedy = 1 * (gradient == gradient.max(axis=1)[..., np.newaxis])
         greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
         pk = self.pi.probas
@@ -180,8 +169,8 @@ class PQA(JAlgorithm):
         dk = np.max(np.linalg.norm(greedy - pk, axis=1)**2 / 2)
         if dk == 0: # CONVERGED! V* = TV*
             return 0, 0
-
-        lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1))
+        
+        lrk = dk / self.gamma**(2*(k + 1))
         return lrk, dk
     
 

@@ -1,84 +1,81 @@
+from gymnax import EnvParams
 import mctx
 import jax
 import chex
 import numpy as np
 from scipy.stats import entropy
-import os
 
 
 from jax import numpy as jnp
 from mctx._src.base import PolicyOutput
-from algorithms.baselines import Algorithm
-from algorithms.policies import SoftmaxPolicy
+from algorithms.practical import JAlgorithm
+from algorithms.policies import JPolicy
 
 from environments.jym import *
+from environments.jym.tabular import JTabular
 from environments.solvable import *
 from planning.jmcts import run_mcts
 
 
-class PGMCTS(Algorithm):
-    def __init__(self, env: Tabular, horizon: int = 100, d: int = 1, M_f: int = 1, M_l: int = 128, M_t: int = None,
+class PGMCTS(JAlgorithm):
+    def __init__(self, gamma: float, pi: JPolicy, horizon: int = 100, depth: int = 1,
+                 M_f: int = 1, M_l: int = 128, M_t: int = None,
                  seed: int = 42):
         
-        self.pi = SoftmaxPolicy(env.n_obs, env.n_act)
-        self.d = d
+        self.pi = pi
+        self.depth = depth
         self.n_episodes = M_f
         self.M_l = M_l
-        self.simulations = M_t or 2**(d + 1)
+        self.simulations = M_t or 2**(depth + 1)
         self.seed = seed
 
-        super().__init__(env, horizon, M_f, self.pi, f'{d}-PGMCTS')
+        super().__init__(gamma, horizon, M_f, self.pi, f'{depth}-PGMCTS')
         self.config['simulations'] = self.simulations
-        self.config['depth'] = self.d
+        self.config['depth'] = self.depth
         self.config['episodes'] = self.n_episodes
         self.config['rollouts'] = self.M_l
         self.config['seed'] = self.seed
     
 
     # Plays a certain number of episodes to estimate the value function
-    def estimate_value(self):
-        grad = jnp.zeros((self.env.R.shape))
+    def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams):
+        grad = jnp.zeros_like(self.pi.probas)
         visits = jnp.zeros((grad.shape[0], ))
 
         #seed = int.from_bytes(os.urandom(2), 'big')
 
         for k in range(self.n_episodes):
-            key = jax.random.PRNGKey(self.seed * self.env.samples * (k + 1)) # DETERMINISTIC!!!!!
+            key = jax.random.PRNGKey(self.seed * (k + 1)) # DETERMINISTIC!!!!!
             #key = jax.random.PRNGKey(seed * self.env.samples * (k + 1))
 
-            self.env.reset()
-            jenv = self.env.jax()
-            jpi = self.pi.jax(jenv.embedding)
-
+            obs, state = env.reset(params)
             tree_key, action_key = jax.random.split(key)
         
             actions = []
-            states = [self.env.state]
+            observations = [obs]
             rewards = []
 
-            while not jenv.done:
+            done = False
+            while not done:
                 # maybe change to fixed horizon rollouts for larger games!!!
-                output: PolicyOutput = run_mcts(tree_key, jenv, jpi, self.d, self.simulations, self.M_l)
+                output: PolicyOutput = run_mcts(env, params, self.depth, self.simulations, self.M_l, self.gamma,
+                                                tree_key, obs, state, self.pi)
                 tree = output.search_tree
-                grad_k = tree.children_rewards[0, 0] + jenv.gamma * tree.children_values[0, 0]
+                grad_k = tree.children_rewards[0, 0] + self.gamma * tree.children_values[0, 0]
 
-                ind = jnp.dot(jpi.embedding, jenv.state)
+                ind = jnp.dot(env.embedding, state)
                 grad = grad.at[ind].add(grad_k)
                 visits = visits.at[ind].add(1)
 
-                logits = jpi.act(jenv)
+                logits = self.pi.act(obs)
                 action_key, _ = jax.random.split(action_key)
                 action = jax.random.categorical(action_key, logits)
-                jenv, r, _ = jenv.step(action)
-                a = int(action)
-                s, r, _ = self.env.step(a)
+                obs, state, reward, done, _ = env.step(key, state, action, params)
 
-                actions.append(a)
-                states.append(s)
-                rewards.append(r)
+                actions.append(action)
+                observations.append(obs)
+                rewards.append(reward)
 
-
-            self.env.samples += self.simulations * self.d
 
         grad = grad / np.maximum(visits, 1).reshape(-1, 1)
             
@@ -99,7 +96,7 @@ class PGMCTS(Algorithm):
         if dk == 0: # CONVERGED! V* = TV*
             return 0, 0
 
-        lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d)
+        lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.depth)
         if np.isinf(lrk) or np.isnan(lrk):
             lrk = np.inf
         return lrk, dk

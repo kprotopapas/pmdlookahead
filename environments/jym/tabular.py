@@ -39,7 +39,10 @@ class JTabular(Environment):
     
     @property
     def embedding(self) -> chex.Array:
-        return jnp.array([self.size, 1])
+        return jnp.ones((1,))
+    
+    def inverse(self, embedded: chex.Array) -> chex.Array:
+        jnp.array([embedded // self.size, embedded % self.size])
     
     @property
     def num_actions(self) -> int:

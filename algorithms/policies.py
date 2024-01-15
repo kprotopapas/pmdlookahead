@@ -11,11 +11,17 @@ from helper import *
 @chex.dataclass(kw_only=True)
 class JPolicy(object):
     embedding = jnp.ones((1,))
+    inverse = jnp.ones((1,))
     # Returns logits associated with current 
     def act(self, obs: chex.Array) -> chex.Array:
         raise NotImplementedError
 
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
+        raise NotImplementedError
+
+
+    @property
+    def probas(self):
         raise NotImplementedError
 
 
@@ -109,6 +115,11 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
 
         return JSoftmaxPolicy(embedding=self.embedding,
                                   logits=logits)
+
+
+    @property
+    def probas(self):
+        return jnp.exp(self.logits) / jnp.sum(jnp.exp(self.logits), axis=1)[..., jnp.newaxis]
 
 
     def numpy(self):

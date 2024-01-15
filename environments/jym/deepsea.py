@@ -62,3 +62,6 @@ class JDeepsea(JTabular):
     @property
     def embedding(self) -> chex.Array:
         return jnp.array([self.size, 1])
+    
+    def inverse(self, embedded: chex.Array) -> chex.Array:
+        jnp.array([embedded // self.size, embedded % self.size])

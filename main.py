@@ -8,7 +8,7 @@ from algorithms.tree import PGMCTS
 from environments.jym import JDeepsea
 
 from environments.solvable import *
-from algorithms.baselines import *
+from algorithms.practical import *
 from helper import random_simplex, parse_args
 
 def run(d=1):
