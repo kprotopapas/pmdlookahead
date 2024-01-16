@@ -44,21 +44,23 @@ class JDeepsea(JTabular):
         env = self
         action = jnp.clip(action, 0, 1)
         position = state.pos
-        dx = action * 2 - 1
+        done = position[0] == self.size - 1
+        dx = jnp.where(done, 0, action * 2 - 1)
 
-        newpos = position + jnp.array([1, dx])
+        newpos = jnp.clip(jnp.array([position[0] + 1, position[1] + dx]), 0, env.size - 1)
         right_penalty = -0.1 * env.gamma**env.size / env.size
 
-        reward = action * jnp.where(position[1] == env.size - 1, 1, right_penalty)
+        reward = action * jnp.where(newpos[1] == env.size - 1, 1, right_penalty)
 
-        done = newpos[0] == env.size
         reward = jnp.where(done, 0, reward)
         
+        done = newpos[0] == env.size - 1
         cumulative = state.reward + reward * self.gamma**position[0]
         new_state = EnvState(newpos, cumulative)
-        new_obs = self.get_obs(new_state)
 
-        return new_obs, new_state, reward, done, {}
+        obs = jnp.sum(jnp.array([self.size, 1]) * newpos)
+
+        return obs, new_state, reward, done, {}
     
 
     def get_obs(self, state: EnvState) -> Array:

@@ -29,6 +29,7 @@ env = Deepsea(size, gamma)
 jenv = JDeepsea(size=size, gamma=gamma)
 params = None
 
+
 #jenv, params = gymnax.make('DeepSea-bsuite', size=size)
 obs, state = jenv.reset(key, params)
 
@@ -37,7 +38,6 @@ for i in range(12):
     env.step(1)
 
 
-embedding = jnp.arange(size**2, dtype=jnp.int32).reshape((size, size))
 jpolicy = JSoftmaxPolicy.uniform(env.n_obs, env.n_act)
 policy = SoftmaxPolicy(env.n_obs, env.n_act)
 
@@ -94,7 +94,6 @@ Q_d = env.R + gamma * next_V
 start = time.time()
 
 print(f'Running with {N} simulations')
-
 lookahead: PolicyOutput = run_mcts(jenv, params, depth, N, M_l, gamma, key, obs, state, jpolicy)
 Q_hat = gamma * lookahead.search_tree.children_values[0, 0] + lookahead.search_tree.children_rewards[0, 0]
 print(f'Total ran in {time.time() - start} seconds')
