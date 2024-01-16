@@ -38,13 +38,13 @@ def parse_alg(alg: str):
         case 'DEQA':
             return DEQA
         case 'PQA':
-            return PQA
+            return JPQA
         case 'EQA':
-            return EQA
+            return JEQA
         case 'PGMCTS':
             return PGMCTS
         case 'PI':
-            return PolicyIteration
+            return JPolicyIteration
 
 
 if __name__ == '__main__':
@@ -73,8 +73,7 @@ if __name__ == '__main__':
     
     #env = Tabular(P, R, mu, gamma)
     #env = Trap(size, gamma)
-    env = Deepsea(size, gamma)
-
+    env = JDeepsea(size, gamma)
 
     H = 2 * horizon
 

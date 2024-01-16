@@ -30,7 +30,9 @@ class Algorithm(object):
         self.pi: Policy = pi
 
 
-    def learn(self, epochs: int = 1000, lr: Callable | float = 1, exact=False, use_wandb=True, verbose=False, group = None):
+    def learn(self, epochs: int = 1000, lr: Callable | float = 1,
+              exact=False, use_wandb=True, verbose=False, group = None):
+        
         self.exact = exact
         info = []
         if use_wandb:

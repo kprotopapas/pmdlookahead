@@ -7,6 +7,7 @@ import numpy as np
 import logging
 import time
 import jax
+from functools import partial
 
 from scipy.stats import entropy
 from gymnax.environments.environment import Environment
@@ -15,23 +16,25 @@ from environments.jym.tabular import JTabular
 
 
 class JAlgorithm(object):
-    def __init__(self, gamma: float, horizon: int, n_trajectories: int, pi: JPolicy, name: str):
+    def __init__(self, env: JTabular, horizon: int, n_trajectories: int, pi: JPolicy, name: str):
         self.config = {'algorithm': name,
-                       'gamma': gamma,
-                       'horizon': horizon}
+                       'environmetn': {'name': env.name, 'gamma': env.gamma},
+                       'horizon': horizon,
+                       'trajectories': n_trajectories}
         self.horizon = horizon
         self.n_trajectories = n_trajectories
-        self.gamma = gamma
         self.pi = pi
+        self.name = name
+        self.env = env
 
 
-    def learn(self, env: JTabular, params: EnvParams, epochs: int = 1000, lr: Callable | float = 1,
-              exact=False, use_wandb=True, verbose=False, group=None, seed=None):
+    def learn(self, epochs: int = 1000, lr: Callable | float = 1,
+              exact=False, use_wandb=True, verbose=False, group=None, seed=42):
 
         self.exact = exact
-        self.env = env
         self.seed = seed
-
+        env = self.env
+        params = env.default_params
         info = []
         if use_wandb:
             config = {
@@ -46,7 +49,6 @@ class JAlgorithm(object):
 
         old = 0
 
-        ostart, sstart = self.env.reset(key)
         for k in range(epochs):
             key = jax.random.PRNGKey(seed * k)
             start = time.time()
@@ -66,7 +68,7 @@ class JAlgorithm(object):
             old = reward
 
             if verbose:
-                logging.info(f'Epoch: {k}, reward: {reward:06f},
+                logging.info(f'Epoch: {k}, reward: {reward:06f},\
                              in time: {duration:06f}, improvement: {improvement:06f}')
 
             if use_wandb:
@@ -82,48 +84,47 @@ class JAlgorithm(object):
 
 
     def reward_to_go(self, rewards: chex.Array):
-        discounts = jnp.power(self.gamma, jnp.arange(len(rewards)))
+        discounts = jnp.power(self.env.gamma, jnp.arange(len(rewards)))
         discounted = rewards * discounts
         rtg = jnp.cumsum(discounted[::-1])[::-1] / discounts
         return rtg
 
-
+    
+    @partial(jax.jit, static_argnums=(0, 2))
     def sample_trajectory(self, key: chex.PRNGKey, env: Environment, params: EnvParams,
                           state: EnvState = None, obs: chex.Array = None, action: int = None):
-        rewards = jnp.ndarray((self.horizon, ))
-        observations = jnp.ndarray((self.horizon + 1,))
-        actions = jnp.ndarray((self.horizon,))
+        observations = jnp.zeros((self.horizon + 1,))
+        actions = jnp.zeros((self.horizon,))
+        rewards = jnp.zeros((self.horizon, ))
 
-        reset_key, action_key = jax.random.split(key)
+        reset_key, action_key, env_key = jax.random.split(key, 3)
 
         obs, state = env.reset(reset_key, params)
         observations = observations.at[0].set(obs)
+    
+        done = False
+        t = 0
+        while not done and t < self.horizon:
+            logits = self.pi.act(obs)
 
-        def cond(a):
-            t, done, _, _ = a
-            return done | t == self.horizon
+            action_key, subkey = jax.random.split(action_key)
+            action = jax.random.categorical(subkey, logits)
 
-        def step(a):
-            t, _, obs, state = a
-            action = self.pi.act(obs)
-            obs, state, reward, done, _ = env.step(action_key, state, action, params)
-            rewards.at[t].set(reward)
-            actions.at[t].set(action)
-            observations.at[t + 1].set(obs)
-
-            return t + 1, done, obs, state
-
-        _ = jax.lax.while_loop(cond, step, (0, False, obs, state))
+            obs, state, reward, done, _ = env.step(env_key, state, action, params)
+            observations = observations.at[t + 1].set(obs)
+            actions = actions.at[t].set(action)
+            rewards = rewards.at[t].set(reward)
+            t += 1
 
         return observations, actions, rewards
-
+        
 
     def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams):
-        Q = jnp.array((env.n_states, env.num_actions))
+        Q = jnp.zeros((env.n_states, env.num_actions))
 
         for s in range(env.n_states):
             state = env.inverse(s)
-            for a in range(env.n_actions):
+            for a in range(env._n_actions):
                 for _ in range(self.n_trajectories):
                     observations, actions, rewards = self.sample_trajectory(key, env, params, s, state, a)
                     rtg = self.reward_to_go(rewards)
@@ -131,6 +132,8 @@ class JAlgorithm(object):
             
 
         Q = Q / self.n_trajectories
+
+        return Q
     
 
     def lrk(self, gradient: chex.Array, k: int):
@@ -140,10 +143,10 @@ class JAlgorithm(object):
         return Q
 
 
-class PolicyIteration(JAlgorithm):
-    def __init__(self, gamma: float, horizon: int, n_trajectories: int, pi: JPolicy):
-        super().__init__(gamma, horizon, n_trajectories, pi, 'PI')
-    
+class JPolicyIteration(JAlgorithm):
+    def __init__(self, env: JTabular, horizon: int, n_trajectories: int, pi: JPolicy):
+        super().__init__(env, horizon, n_trajectories, pi, 'PI')
+
 
     def lrk(self, k: int, gradient: chex.Array):
         return jnp.inf
@@ -151,14 +154,15 @@ class PolicyIteration(JAlgorithm):
 
 class REINFORCE(JAlgorithm):
     # Projected Policy Gradient Ascent using REINFORCE
-    def __init__(self, gamma: float, horizon: int, n_trajectories: int, pi: JPolicy):
-        super().__init__(gamma, horizon, n_trajectories, pi, 'REINFORCE')
+    def __init__(self, env: JTabular, horizon: int, n_trajectories: int, pi: JPolicy):
+        super().__init__(env, horizon, n_trajectories, pi, 'REINFORCE')
 
 
-class PQA(JAlgorithm):
+class JPQA(JAlgorithm):
     # Projected Q-Ascent using MC rollouts to estimate Q
-    def __init__(self, gamma: float, horizon: int, n_trajectories: int, pi: JPolicy):
-        super().__init__(gamma, horizon, n_trajectories, pi, 'PQA')
+    def __init__(self, env: JTabular, horizon: int, n_trajectories: int):
+        pi = JPolicy()
+        super().__init__(env, horizon, n_trajectories, pi, 'PQA')
         
 
     def lrk(self, k: int, gradient: chex.Array):
@@ -170,33 +174,18 @@ class PQA(JAlgorithm):
         if dk == 0: # CONVERGED! V* = TV*
             return 0, 0
         
-        lrk = dk / self.gamma**(2*(k + 1))
+        lrk = dk / self.env.gamma**(2*(k + 1))
         return lrk, dk
     
 
-class EQA(JAlgorithm):
+class JEQA(JAlgorithm):
     # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int):
-        pi = JSoftmaxPolicy(env.observation_space.n, env.action_space.n)
+        pi = JSoftmaxPolicy.uniform(env.n_states, env.num_actions)
         super().__init__(env, horizon, n_trajectories, pi, 'EQA')
 
 
-    def estimate_value(self):
-        Q = np.zeros_like(self.env.R)
-        self.env.reset()
-        states, actions, rewards = self.sample_trajectory()
-        rtg = self.env.rtg(rewards)
-        for s, a, r in zip(states, actions, rtg):
-            Q[s, a] += r # or maybe average???
-
-        return Q
-
-    
-    def grad_exact(self, Q):
-        return Q
-
-
-    def lrk(self, lr, k, gradient):
+    def lrk(self, k: int, gradient: chex.Array):
         greedy = 1 * (gradient == gradient.max(axis=1)[..., np.newaxis])
         greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
         pk = self.pi.probas
@@ -204,8 +193,8 @@ class EQA(JAlgorithm):
         dk = np.max(entropy(greedy, pk, axis=1))
         if dk == 0: # CONVERGED! V* = TV*
             return 0, 0
-
-        lrk = dk * lr(k) if callable(lr) else lr * dk / self.gamma**(2*(k + 1))
+        
+        lrk = dk / self.env.gamma**(2*(k + 1))
         return lrk, dk
 
 
@@ -296,7 +285,7 @@ class DPMD(JAlgorithm):
 
                     self.env.state = s
                     sp, r, _ = self.env.step(a)
-                    Q[s, a] = r + self.gamma * V[sp]
+                    Q[s, a] = r + self.env.gamma * V[sp]
 
         return np.max(Q, axis=1)
 

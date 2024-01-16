@@ -10,8 +10,6 @@ from helper import *
 
 @chex.dataclass(kw_only=True)
 class JPolicy(object):
-    embedding = jnp.ones((1,))
-    inverse = jnp.ones((1,))
     # Returns logits associated with current 
     def act(self, obs: chex.Array) -> chex.Array:
         raise NotImplementedError
@@ -99,8 +97,7 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
     logits: chex.Array
 
     def act(self, obs: chex.Array) -> chex.Array:
-        state = jnp.sum(obs * self.embedding).astype(jnp.int32)
-        return self.logits[state]
+        return self.logits[obs]
 
 
     def update(self, grad: chex.Array, ind: chex.Array, lr: float) -> JPolicy:
@@ -113,8 +110,7 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
         argmax = jnp.where(grad == grad.max(), jnp.inf, -jnp.inf)
         logits = jnp.where(jnp.isinf(lr), argmax, new_logits)
 
-        return JSoftmaxPolicy(embedding=self.embedding,
-                                  logits=logits)
+        return JSoftmaxPolicy(logits=logits)
 
 
     @property
@@ -127,8 +123,8 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
 
 
     @staticmethod
-    def uniform(n_states: int, n_actions: int, embedding = jnp.ones((1,))) -> JSoftmaxPolicy:
-        return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)), embedding=embedding)
+    def uniform(n_states: int, n_actions: int) -> JSoftmaxPolicy:
+        return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)))
 
 
 class SoftmaxPolicy(Policy):

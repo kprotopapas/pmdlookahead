@@ -1,10 +1,11 @@
+from chex._src.pytypes import Array
 from flax import struct
 from typing import Callable
 
 import chex
 from jax import numpy as jnp
 import jax
-from gymnax.environments.environment import Environment
+from gymnax.environments.environment import EnvState, Environment
 import numpy as np
 from functools import partial
 
@@ -28,12 +29,13 @@ class JDeepsea(JTabular):
         self.size = size
         self.gamma = gamma
 
-
-    @partial(jax.jit, static_argnums=(0, ))
+    
+    @partial(jax.jit, static_argnums=(0,))
     def reset(self, key: chex.PRNGKey, params: EnvParams) -> tuple[chex.Array, EnvState]:
         pos = jnp.zeros((2, ), dtype=jnp.int32)
         reward = 0
-        return pos, EnvState(pos, reward)
+        state = EnvState(pos, reward)
+        return self.get_obs(state), state
 
 
     @partial(jax.jit, static_argnums=(0,))
@@ -42,22 +44,25 @@ class JDeepsea(JTabular):
         env = self
         action = jnp.clip(action, 0, 1)
         position = state.pos
-        done = position[0] == self.size - 1
-        dx = jnp.where(done, 0, action * 2 - 1)
+        dx = action * 2 - 1
 
-        newpos = jnp.clip(jnp.array([position[0] + 1, position[1] + dx]), 0, env.size - 1)
+        newpos = position + jnp.array([1, dx])
         right_penalty = -0.1 * env.gamma**env.size / env.size
 
-        reward = action * jnp.where(newpos[1] == env.size - 1, 1, right_penalty)
+        reward = action * jnp.where(position[1] == env.size - 1, 1, right_penalty)
 
+        done = newpos[0] == env.size
         reward = jnp.where(done, 0, reward)
         
-        done = newpos[0] == env.size - 1
         cumulative = state.reward + reward * self.gamma**position[0]
         new_state = EnvState(newpos, cumulative)
+        new_obs = self.get_obs(new_state)
 
-        return newpos, new_state, reward, done, {}
+        return new_obs, new_state, reward, done, {}
     
+
+    def get_obs(self, state: EnvState) -> Array:
+        return jnp.sum(self.embedding * state.pos).astype(jnp.int32)
     
     @property
     def embedding(self) -> chex.Array:

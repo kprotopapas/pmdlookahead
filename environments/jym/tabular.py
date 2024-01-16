@@ -23,7 +23,7 @@ class JTabular(Environment):
     def __init__(self, n_states: int, n_actions: int, gamma: float):
         super().__init__()
         self.n_states = n_states
-        self.n_actions = n_actions
+        self._n_actions = n_actions
         self.gamma = gamma
 
 
@@ -46,4 +46,9 @@ class JTabular(Environment):
     
     @property
     def num_actions(self) -> int:
-        return self.n_actions
+        return self._n_actions
+
+    
+    @property
+    def default_params(self) -> EnvParams:
+        return EnvParams()
