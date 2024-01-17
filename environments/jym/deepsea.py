@@ -48,7 +48,7 @@ class JDeepsea(JTabular):
         newpos = jnp.clip(position + delta, 0, self.size)
         new_state = EnvState(newpos)
 
-        right_penalty = -0.1 * self.gamma**self.size / self.size
+        right_penalty = -0.1 * self.gamma**self.size / self.size # TODO different penalty to bsuite
         reward = action * jnp.where(newpos[1] == self.size, 1, right_penalty)
         reward = jnp.where(done, 0, reward)
         
@@ -74,3 +74,7 @@ class JDeepsea(JTabular):
         col = state_index % self.size
         pos = jnp.array([row, col])
         return obs, EnvState(pos)
+
+    @partial(jax.jit, static_argnums=(0,))
+    def index(self, obs: chex.Array) -> int:
+        return jnp.argmax(obs)

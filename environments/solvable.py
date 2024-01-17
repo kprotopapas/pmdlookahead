@@ -271,15 +271,12 @@ class Deepsea(Tabular):
         P = np.zeros((n_obs, n_obs, n_act))
         R = np.zeros((n_obs, n_act))
         R[:, 1] = -0.1 * gamma**size / size # TODO penalty different to bsuite...
+        R[-1, 1] = 1
 
         for s in range(n_obs):
             for a in range(n_act):
                 sp = self.transition(s, a)
                 P[sp, s, a] = 1
-                if sp == n_obs - 1:
-                    R[s, a] = 1
-
-        R[-size:, :] = 0
 
         name = f'Deepsea-v2-{self.size}'
 

@@ -110,7 +110,7 @@ class JAlgorithm(object):
             action = jax.random.categorical(action_key, logits + prior)
             nobs, nstate, reward, done, _ = env.step(key, state, action, params)
             reward = jnp.where(old_done, 0, reward)
-            return (key, nobs, nstate, pi, done), (obs, action, reward)
+            return (key, nobs, nstate, pi, done | old_done), (obs, action, reward)
 
 
         carry, ys = jax.lax.scan(step, (key, obs, state, self.pi, jnp.bool_(False)), priors, length=self.horizon)
@@ -142,7 +142,7 @@ class JAlgorithm(object):
 
         priors_batch = jnp.zeros((env.num_actions, self.horizon, env.num_actions))
         for i in range(env.num_actions):
-            priors_batch = priors_batch.at[i, 0, i].set(1)
+            priors_batch = priors_batch.at[i, 0, i].set(jnp.inf)
 
         keys = jax.random.split(key, self.n_trajectories)
 

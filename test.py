@@ -1,5 +1,6 @@
 
 import jax
+from jax import numpy as jnp
 import numpy as np
 import timeit
 
@@ -41,3 +42,4 @@ pi = SoftmaxPolicy(env.n_obs, env.n_act)
 Q_real = env.Q(pi)
 
 print(f'Error: {np.max(np.abs(Q - Q_real))}')
+pass
