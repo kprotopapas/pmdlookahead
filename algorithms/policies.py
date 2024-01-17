@@ -8,21 +8,6 @@ from jax import numpy as jnp
 from helper import *
 
 
-@chex.dataclass(kw_only=True)
-class JPolicy(object):
-    # Returns logits associated with current 
-    def act(self, obs: chex.Array) -> chex.Array:
-        raise NotImplementedError
-
-    def update(self, grad: chex.Array, lr: float) -> JPolicy:
-        raise NotImplementedError
-
-
-    @property
-    def probas(self):
-        raise NotImplementedError
-
-
 class Policy:
     def sample(self, state):
         raise NotImplementedError
@@ -92,41 +77,6 @@ class DirectPolicy(Policy):
         return self.probabilities
 
 
-@chex.dataclass(kw_only=True)
-class JSoftmaxPolicy(JPolicy): # softmax policy
-    logits: chex.Array
-
-    def act(self, obs: chex.Array) -> chex.Array:
-        return self.logits[obs]
-
-
-    def update(self, grad: chex.Array, ind: chex.Array, lr: float) -> JPolicy:
-        grad = grad - grad.mean() #  center gradient before update
-        
-        new = self.logits[ind] + lr * grad
-        new_centered = new - new.max() # renormalize by max
-        new_logits = logits.at[ind].set(new_centered)
-
-        argmax = jnp.where(grad == grad.max(), jnp.inf, -jnp.inf)
-        logits = jnp.where(jnp.isinf(lr), argmax, new_logits)
-
-        return JSoftmaxPolicy(logits=logits)
-
-
-    @property
-    def probas(self):
-        return jnp.exp(self.logits) / jnp.sum(jnp.exp(self.logits), axis=1)[..., jnp.newaxis]
-
-
-    def numpy(self):
-        return SoftmaxPolicy(self.logits.shape[0], self.logits.shape[1])
-
-
-    @staticmethod
-    def uniform(n_states: int, n_actions: int) -> JSoftmaxPolicy:
-        return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)))
-
-
 class SoftmaxPolicy(Policy):
     def __init__(self, n_states, n_actions):
         self.n_states = n_states
@@ -172,3 +122,87 @@ class SoftmaxPolicy(Policy):
     def jax(self, embedding=jnp.ones((1,))) -> JPolicy:
         logits = jnp.array(self.params)
         return JSoftmaxPolicy(logits=logits, embedding=embedding)
+
+
+@chex.dataclass(kw_only=True)
+class JPolicy(object):
+    # Returns logits associated with current 
+    def act(self, obs: chex.Array) -> chex.Array:
+        raise NotImplementedError
+
+    def update(self, grad: chex.Array, lr: float) -> JPolicy:
+        raise NotImplementedError
+
+
+    @property
+    def probas(self):
+        raise NotImplementedError
+
+
+@chex.dataclass(kw_only=True)
+class JSoftmaxPolicy(JPolicy): # softmax policy
+    logits: chex.Array
+
+    def act(self, obs: chex.Array) -> chex.Array:
+        return self.logits[obs]
+
+
+    def update(self, grad: chex.Array, lr: float) -> JPolicy:
+        grad = grad - grad.mean(axis=1)[..., jnp.newaxis] #  center gradient before update
+        
+        new = self.logits + lr * grad
+        new_centered = new - new.max(axis=1)[..., jnp.newaxis] # renormalize by max
+
+        argmax = jnp.where(grad == grad.max(axis=1)[..., jnp.newaxis], jnp.inf, -jnp.inf)
+        logits = jnp.where(jnp.isinf(lr), argmax, new_centered)
+
+        return JSoftmaxPolicy(logits=logits)
+
+
+    @property
+    def probas(self):
+        return jnp.exp(self.logits) / jnp.sum(jnp.exp(self.logits), axis=1)[..., jnp.newaxis]
+
+
+    def numpy(self):
+        return SoftmaxPolicy(self.logits.shape[0], self.logits.shape[1])
+
+
+    @staticmethod
+    def uniform(n_states: int, n_actions: int) -> JSoftmaxPolicy:
+        return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)))
+
+
+@chex.dataclass(kw_only=True)
+class JNeuralPolicy(JPolicy): # softmax policy
+    net: [chex.Array]
+    embedding: chex.Array
+
+    def act(self, obs: chex.Array) -> chex.Array:
+        x = jnp.sum(self.embedding * obs)
+        for layer in self.net:
+            x = jnp.matmul(layer, obs)
+
+        return x
+
+
+    def update(self, grad: chex.Array, lr: float) -> JPolicy:
+        grad = grad - grad.mean(axis=1)[..., jnp.newaxis] #  center gradient before update
+        
+        new = self.logits + lr * grad
+        new_centered = new - new.max(axis=1)[..., jnp.newaxis] # renormalize by max
+
+        argmax = jnp.where(grad == grad.max(axis=1)[..., jnp.newaxis], jnp.inf, -jnp.inf)
+        logits = jnp.where(jnp.isinf(lr), argmax, new_centered)
+
+        return JNeuralPolicy(net=self.net, embedding=self.embedding) # TODO
+
+
+    @property
+    def probas(self):
+        return jnp.exp(self.logits) / jnp.sum(jnp.exp(self.logits), axis=1)[..., jnp.newaxis]
+
+
+    @staticmethod
+    def uniform(n_states: int, n_actions: int) -> JSoftmaxPolicy:
+        return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)))
