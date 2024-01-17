@@ -202,17 +202,6 @@ class PQA(Algorithm):
         pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, n_trajectories, pi, 'PQA')
 
-
-    def estimate_value(self):
-        Q = np.zeros_like(self.env.R)
-        self.env.reset()
-        states, actions, rewards = self.sample_trajectory()
-        rtg = self.env.rtg(rewards)
-        for s, a, r in zip(states, actions, rtg):
-            Q[s, a] += r # or maybe average???
-
-        return Q
-
     
     def grad_exact(self, Q):
         return Q
@@ -236,17 +225,6 @@ class EQA(Algorithm):
     def __init__(self, env: Tabular, horizon: int, n_trajectories: int):
         pi = SoftmaxPolicy(env.observation_space.n, env.action_space.n)
         super().__init__(env, horizon, n_trajectories, pi, 'EQA')
-
-
-    def estimate_value(self):
-        Q = np.zeros_like(self.env.R)
-        self.env.reset()
-        states, actions, rewards = self.sample_trajectory()
-        rtg = self.env.rtg(rewards)
-        for s, a, r in zip(states, actions, rtg):
-            Q[s, a] += r # or maybe average???
-
-        return Q
 
     
     def grad_exact(self, Q):

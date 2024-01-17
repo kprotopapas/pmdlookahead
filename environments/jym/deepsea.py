@@ -15,7 +15,6 @@ from environments.jym.tabular import JTabular
 @struct.dataclass
 class EnvState:
     pos: chex.Array
-    reward: chex.Array
 
 @struct.dataclass
 class EnvParams:
@@ -32,8 +31,7 @@ class JDeepsea(JTabular):
     @partial(jax.jit, static_argnums=(0,))
     def reset(self, key: chex.PRNGKey, params: EnvParams) -> tuple[chex.Array, EnvState]:
         pos = jnp.zeros((2, ), dtype=jnp.int32)
-        reward = 0
-        state = EnvState(pos, reward)
+        state = EnvState(pos)
         return self.get_obs(state), state
 
 
@@ -45,30 +43,34 @@ class JDeepsea(JTabular):
         done = position[0] >= self.size
 
         dx = 2 * action - 1
-        delta = jnp.where(done, jnp.zeros((2, )), jnp.array([1, dx]))
+        delta = jnp.where(done, jnp.zeros((2, ), dtype=jnp.int32), jnp.array([1, dx], dtype=jnp.int32))
 
-        newpos = position + delta
+        newpos = jnp.clip(position + delta, 0, self.size)
+        new_state = EnvState(newpos)
+
         right_penalty = -0.1 * self.gamma**self.size / self.size
-
         reward = action * jnp.where(newpos[1] == self.size, 1, right_penalty)
-
         reward = jnp.where(done, 0, reward)
         
         done = newpos[0] >= self.size
-        cumulative = state.reward + reward * self.gamma**position[0]
-        new_state = EnvState(newpos, cumulative)
 
-        obs = jnp.sum(jnp.array([self.size, 1]) * newpos).astype(jnp.int32)
+        new_obs = self.get_obs(new_state)
 
-        return obs, new_state, reward, done, {}
+        return new_obs, new_state, reward, done, {}
     
 
     def get_obs(self, state: EnvState) -> Array:
-        return jnp.sum(self.embedding * state.pos).astype(jnp.int32)
+        ind = jnp.sum(jnp.array([self.size, 1]) * state.pos).astype(jnp.int32)
+        return jnp.zeros((self.n_states, )).at[ind].set(1)
     
     @property
     def embedding(self) -> chex.Array:
         return jnp.array([self.size, 1])
     
-    def inverse(self, embedded: chex.Array) -> chex.Array:
-        jnp.array([embedded // self.size, embedded % self.size])
+    @partial(jax.jit, static_argnums=(0,))
+    def inverse(self, state_index: int) -> tuple[chex.Array, EnvState]:
+        obs = jnp.zeros((self.n_states, )).at[state_index].set(1)
+        row = state_index // self.size
+        col = state_index % self.size
+        pos = jnp.array([row, col])
+        return obs, EnvState(pos)

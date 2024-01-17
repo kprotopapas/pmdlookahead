@@ -41,9 +41,11 @@ class JTabular(Environment):
     def embedding(self) -> chex.Array:
         return jnp.ones((1,))
     
-    def inverse(self, embedded: chex.Array) -> chex.Array:
-        jnp.array([embedded // self.size, embedded % self.size])
+    @partial(jax.jit, static_argnums=(0,))
+    def inverse(self, state_ind: int) -> tuple[chex.Array, EnvState]:
+        raise NotImplementedError
     
+        
     @property
     def num_actions(self) -> int:
         return self._n_actions

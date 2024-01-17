@@ -262,7 +262,7 @@ class Deepsea(Tabular):
         self.size = size
 
         n_obs = size**2
-        n_act = 2 # stay or go right
+        n_act = 2 # go left or right
         self.grid = np.arange(n_obs).reshape((size, size))
 
         mu = np.zeros((n_obs, ))
@@ -270,7 +270,7 @@ class Deepsea(Tabular):
 
         P = np.zeros((n_obs, n_obs, n_act))
         R = np.zeros((n_obs, n_act))
-        R[:, 1] = -0.1 * gamma**size / size
+        R[:, 1] = -0.1 * gamma**size / size # TODO penalty different to bsuite...
 
         for s in range(n_obs):
             for a in range(n_act):

@@ -88,52 +88,67 @@ class JAlgorithm(object):
         discounted = rewards * discounts
         rtg = jnp.cumsum(discounted[::-1])[::-1] / discounts
         return rtg
-
+    
     
     @partial(jax.jit, static_argnums=(0, 2))
-    def sample_trajectory(self, key: chex.PRNGKey, env: Environment, params: EnvParams,
-                          state: EnvState = None, obs: chex.Array = None, action: int = None):
-        observations = jnp.zeros((self.horizon + 1,))
-        actions = jnp.zeros((self.horizon,))
-        rewards = jnp.zeros((self.horizon, ))
+    def sample_trajectory(self, key: chex.PRNGKey, env: JTabular, params: EnvParams):
+        env_key, action_key = jax.random.split(key)
+        obs, state = env.reset(env_key, params)
+        priors = jnp.zeros((self.horizon, env.num_actions))
 
-        reset_key, action_key, env_key = jax.random.split(key, 3)
-
-        obs, state = env.reset(reset_key, params)
-        observations = observations.at[0].set(obs)
+        return self.sample_trajectory_from_state(action_key, env, params, obs, state, priors)
     
-        done = False
-        t = 0
-        while not done and t < self.horizon:
-            logits = self.pi.act(obs)
-
-            action_key, subkey = jax.random.split(action_key)
-            action = jax.random.categorical(subkey, logits)
-
-            obs, state, reward, done, _ = env.step(env_key, state, action, params)
-            observations = observations.at[t + 1].set(obs)
-            actions = actions.at[t].set(action)
-            rewards = rewards.at[t].set(reward)
-            t += 1
-
-        return observations, actions, rewards
+    
+    @partial(jax.jit, static_argnums=(0, 2))
+    def sample_trajectory_from_state(self, key: chex.PRNGKey, env: JTabular, params: EnvParams,
+                          obs: chex.Array, state: EnvState, priors: chex.Array):
         
+        def step(a: tuple[chex.PRNGKey, chex.Array, EnvState, JPolicy, jnp.bool_], prior: chex.Array):
+            key, obs, state, pi, old_done = a
+            key, action_key = jax.random.split(key)
+            logits = pi.act(obs)
+            action = jax.random.categorical(action_key, logits + prior)
+            nobs, nstate, reward, done, _ = env.step(key, state, action, params)
+            reward = jnp.where(old_done, 0, reward)
+            return (key, nobs, nstate, pi, done), (obs, action, reward)
 
+
+        carry, ys = jax.lax.scan(step, (key, obs, state, self.pi, jnp.bool_(False)), priors, length=self.horizon)
+
+        key, obs, state, _, done = carry
+        observations, actions, rewards = ys
+        observations = jnp.vstack(([obs, observations]))
+
+
+        return observations, actions, rewards # TODO for more advanced, flag "done" states as invalid...
+
+
+    @partial(jax.jit, static_argnums=(0, 2))
     def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams):
         Q = jnp.zeros((env.n_states, env.num_actions))
 
-        for s in range(env.n_states):
-            state = env.inverse(s)
-            for a in range(env._n_actions):
-                for _ in range(self.n_trajectories):
-                    observations, actions, rewards = self.sample_trajectory(key, env, params, s, state, a)
-                    rtg = self.reward_to_go(rewards)
-                    Q = Q.at[s, a].add(rtg[0])
-            
+        def value(value_key, obs, state, priors):
+            _, _, rewards = self.sample_trajectory_from_state(value_key, env, params, obs, state, priors)
+            rtg = self.reward_to_go(rewards)
+            return rtg[0]
 
-        Q = Q / self.n_trajectories
+        over_priors = jax.vmap(value, (None, None, None, 0))
+        over_both = jax.vmap(over_priors, (None, 0, 0, None))
+        over_keys = jax.vmap(over_both, (0, None, None, None))
+        
+        state_nums = jnp.arange(env.n_states)
+        inverse = lambda s: env.inverse(s)
+        obs_batch, state_batch = jax.vmap(inverse, (0,))(state_nums)
 
-        return Q
+        priors_batch = jnp.zeros((env.num_actions, self.horizon, env.num_actions))
+        for i in range(env.num_actions):
+            priors_batch = priors_batch.at[i, 0, i].set(1)
+
+        keys = jax.random.split(key, self.n_trajectories)
+
+        Q_all = over_keys(keys, obs_batch, state_batch, priors_batch)
+
+        return jnp.mean(Q_all, axis=0)
     
 
     def lrk(self, gradient: chex.Array, k: int):

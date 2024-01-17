@@ -143,8 +143,8 @@ class JPolicy(object):
 class JSoftmaxPolicy(JPolicy): # softmax policy
     logits: chex.Array
 
-    def act(self, obs: chex.Array) -> chex.Array:
-        return self.logits[obs]
+    def act(self, obs: chex.Array) -> chex.Array: # needs one-hot encoded states
+        return jnp.matmul(self.logits.T, obs)
 
 
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
