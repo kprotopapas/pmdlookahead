@@ -4,7 +4,7 @@ import numpy as np
 from gymnax.environments.environment import Environment
 
 from algorithms.policies import Policy
-from environments.jym import JDeepsea, JTrap
+from environments.gymnax import JDeepsea, JTrap
 
 
 class Tabular(gym.Env):

@@ -4,7 +4,7 @@ import numpy as np
 import time
 from algorithms.policies import JSoftmaxPolicy
 
-from environments.jym import *
+from environments.gymnax import *
 from environments.solvable import *
 from algorithms.policies import *
 from planning.jmcts import *

@@ -12,7 +12,7 @@ from functools import partial
 from scipy.stats import entropy
 from gymnax.environments.environment import Environment
 from algorithms.policies import JPolicy, JSoftmaxPolicy
-from environments.jym.tabular import JTabular
+from environments.gymnax.tabular import JTabular
 
 
 class JAlgorithm(object):
@@ -125,8 +125,6 @@ class JAlgorithm(object):
 
     @partial(jax.jit, static_argnums=(0, 2))
     def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams):
-        Q = jnp.zeros((env.n_states, env.num_actions))
-
         def value(value_key, obs, state, priors):
             _, _, rewards = self.sample_trajectory_from_state(value_key, env, params, obs, state, priors)
             rtg = self.reward_to_go(rewards)

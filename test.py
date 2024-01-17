@@ -5,9 +5,9 @@ import numpy as np
 import timeit
 
 from algorithms.policies import SoftmaxPolicy
-from environments.jym import JDeepsea
+from environments.gymnax import JDeepsea
 from environments.solvable import Deepsea
-from algorithms.practical import JEQA
+from algorithms.gymnax import JEQA
 
 
 size = 16

@@ -9,7 +9,7 @@ from gymnax.environments.environment import EnvState, Environment
 import numpy as np
 from functools import partial
 
-from environments.jym.tabular import JTabular
+from environments.gymnax.tabular import JTabular
 
 
 @struct.dataclass
