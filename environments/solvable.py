@@ -278,7 +278,7 @@ class Deepsea(Tabular):
                 sp = self.transition(s, a)
                 P[sp, s, a] = 1
 
-        name = f'Deepsea-v2-{self.size}'
+        name = f'Deepsea-v3-{self.size}'
 
         super().__init__(P, R, mu, gamma, name=name)
 
