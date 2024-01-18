@@ -45,16 +45,18 @@ class JDeepsea(JTabular):
         dx = 2 * action - 1
         delta = jnp.where(done, jnp.zeros((2, ), dtype=jnp.int32), jnp.array([1, dx], dtype=jnp.int32))
 
-        newpos = jnp.clip(position + delta, 0, self.size)
-        new_state = EnvState(newpos)
+        new_pos = jnp.clip(position + delta, 0, self.size)
 
         right_penalty = -0.1 * self.gamma**self.size / self.size # TODO different penalty to bsuite
-        goal = (newpos[1] == self.size) & (newpos[0] == self.size)
+        goal = (new_pos[1] == self.size) & (new_pos[0] == self.size)
         reward = action * jnp.where(goal, 1, right_penalty)
         reward = jnp.where(done, 0, reward)
         
-        done = newpos[0] >= self.size
-
+        done = new_pos[0] >= self.size
+        start = jnp.zeros((2, ), dtype=jnp.int32)
+        
+        new_pos = jax.lax.select(done, start, new_pos)
+        new_state = EnvState(new_pos)
         new_obs = self.get_obs(new_state)
 
         return new_obs, new_state, reward, done, {}

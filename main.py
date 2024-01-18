@@ -8,7 +8,7 @@ from algorithms.tree import PGMCTS
 from environments.gymnax import JDeepsea
 
 from environments.solvable import *
-from algorithms.gymnax import *
+from algorithms.baselines import *
 from helper import random_simplex, parse_args
 
 def run(d=1):
@@ -38,13 +38,13 @@ def parse_alg(alg: str):
         case 'DEQA':
             return DEQA
         case 'PQA':
-            return JPQA
+            return PQA
         case 'EQA':
-            return JEQA
+            return EQA
         case 'PGMCTS':
             return PGMCTS
         case 'PI':
-            return JPolicyIteration
+            return PolicyIteration
 
 
 if __name__ == '__main__':
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     
     #env = Tabular(P, R, mu, gamma)
     #env = Trap(size, gamma)
-    env = JDeepsea(size, gamma)
+    env = Deepsea(size, gamma)
 
     H = 2 * horizon
 

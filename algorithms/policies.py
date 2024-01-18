@@ -137,6 +137,32 @@ class JPolicy(object):
     @property
     def probas(self):
         raise NotImplementedError
+    
+    
+@chex.dataclass(kw_only=True)
+class JDirectPolicy(JPolicy):
+    probas: chex.Array
+
+    def act(self, obs: chex.Array) -> chex.Array:
+        return jnp.log(jnp.matmul(self.probas.T, obs))
+    
+    def update(self, grad: chex.Array, lr: float) -> JPolicy:
+        if jnp.isinf(lr):
+            probas = 1. * (grad == grad.max(axis=1)[..., jnp.newaxis])
+            probas /= probas.sum(axis=1)[..., jnp.newaxis]
+            return JDirectPolicy(probas=probas)
+        
+        new = self.probas + lr * grad
+        over_axis = jax.vmap(jax_simplex_project_sort, (0, None))
+        probas = over_axis(new - new.mean(axis=1)[..., jnp.newaxis])
+
+        return JDirectPolicy(probas=probas)
+    
+
+    @staticmethod
+    def uniform(n_states: int, n_actions: int) -> JDirectPolicy:
+        probas = jnp.ones((n_states, n_actions), dtype=jnp.float32) / n_actions
+        return JDirectPolicy(probas=probas)
 
 
 @chex.dataclass(kw_only=True)

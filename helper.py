@@ -1,10 +1,12 @@
 import numpy as np
+from jax import numpy as jnp
+import jax
 import argparse
 
 MAX_FOR_EXP = 709
 
 
-def simplex_project_sort(v, z=1):
+def simplex_project_sort(v: np.ndarray, z: float = 1):
     n_features = v.shape[0]
     u = np.sort(v)[::-1]
     cssv = np.cumsum(u) - z
@@ -16,7 +18,20 @@ def simplex_project_sort(v, z=1):
     return w
 
 
-def random_simplex(shape):
+@jax.jit
+def jax_simplex_project_sort(v: jnp.ndarray, z: float = 1):
+    n_features = v.shape[0]
+    u = jnp.sort(v)[::-1]
+    cssv = jnp.cumsum(u) - z
+    ind = jnp.arange(n_features) + 1
+    cond = u - cssv / ind > 0
+    rho = ind[cond][-1]
+    theta = cssv[cond][-1] / jnp.float32(rho)
+    w = jnp.maximum(v - theta, 0)
+    return w
+
+
+def random_simplex(shape: tuple):
     new_shape = (shape[0] + 1,) + shape[1:]
     temp = np.random.random(size=new_shape).astype(np.float64)
     temp[0, ...] = 0

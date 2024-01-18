@@ -11,7 +11,6 @@ from typing import Callable
 
 logging.basicConfig(level=logging.INFO)
 
-
 class Algorithm(object):
     def __init__(self, env: Tabular, horizon: int, n_trajectories: int, pi: Policy, name: str):
         self.env = env

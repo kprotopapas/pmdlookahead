@@ -11,14 +11,16 @@ from functools import partial
 
 from scipy.stats import entropy
 from gymnax.environments.environment import Environment
-from algorithms.policies import JPolicy, JSoftmaxPolicy
+from algorithms.policies import JDirectPolicy, JPolicy, JSoftmaxPolicy
 from environments.gymnax.tabular import JTabular
+
+logging.basicConfig(level=logging.INFO)
 
 
 class JAlgorithm(object):
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int, pi: JPolicy, name: str):
         self.config = {'algorithm': name,
-                       'environmetn': {'name': env.name, 'gamma': env.gamma},
+                       'environment': {'name': env.name, 'gamma': env.gamma},
                        'horizon': horizon,
                        'trajectories': n_trajectories}
         self.horizon = horizon
@@ -55,10 +57,10 @@ class JAlgorithm(object):
             
             Q = self.estimate_value(key, env, params)
             gradient = self.grad(Q)
-            lr = self.lrk(Q, k)
-            self.pi = self.pi.update(gradient, lr)
+            lk, dk = self.lrk(lr, k, Q)
+            self.pi = self.pi.update(gradient, lk)
 
-            reward = jnp.max(jnp.abs(Q))
+            reward = self.evaluate(key, env, params, 16)
             metrics = {'reward': reward}
 
             duration = time.time() - start
@@ -68,8 +70,7 @@ class JAlgorithm(object):
             old = reward
 
             if verbose:
-                logging.info(f'Epoch: {k}, reward: {reward:06f},\
-                             in time: {duration:06f}, improvement: {improvement:06f}')
+                logging.info(f'Epoch: {k}, reward: {reward:06f}, in time: {duration:06f}, improvement: {improvement:06f}')
 
             if use_wandb:
                 wandb.log(metrics)
@@ -149,7 +150,20 @@ class JAlgorithm(object):
         return jnp.mean(Q_all, axis=0)
     
 
-    def lrk(self, gradient: chex.Array, k: int):
+    @partial(jax.jit, static_argnums=(0, 2, 4))
+    def evaluate(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, rollouts: int) -> float:
+        keys = jax.random.split(key, rollouts)
+
+        def value(key, env, params):
+            _, _, rewards = self.sample_trajectory(key, env, params)
+            r = self.reward_to_go(rewards)[0]
+            return r
+        
+        rewards = jax.vmap(value, (0, None, None))(keys, env, params)
+        return jnp.mean(rewards)
+    
+
+    def lrk(self, lr, k: int, gradient: chex.Array):
         raise NotImplementedError
     
     def grad(self, Q):
@@ -161,11 +175,11 @@ class JPolicyIteration(JAlgorithm):
         super().__init__(env, horizon, n_trajectories, pi, 'PI')
 
 
-    def lrk(self, k: int, gradient: chex.Array):
-        return jnp.inf
+    def lrk(self, lr, k: int, gradient: chex.Array):
+        return jnp.inf, 0
 
 
-class REINFORCE(JAlgorithm):
+class JREINFORCE(JAlgorithm):
     # Projected Policy Gradient Ascent using REINFORCE
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int, pi: JPolicy):
         super().__init__(env, horizon, n_trajectories, pi, 'REINFORCE')
@@ -174,11 +188,11 @@ class REINFORCE(JAlgorithm):
 class JPQA(JAlgorithm):
     # Projected Q-Ascent using MC rollouts to estimate Q
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int):
-        pi = JPolicy()
+        pi = JDirectPolicy.uniform(env.n_states, env.num_actions)
         super().__init__(env, horizon, n_trajectories, pi, 'PQA')
         
 
-    def lrk(self, k: int, gradient: chex.Array):
+    def lrk(self, lr: Callable | float, k: int, gradient: chex.Array):
         greedy = 1 * (gradient == gradient.max(axis=1)[..., np.newaxis])
         greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
         pk = self.pi.probas
@@ -198,7 +212,7 @@ class JEQA(JAlgorithm):
         super().__init__(env, horizon, n_trajectories, pi, 'EQA')
 
 
-    def lrk(self, k: int, gradient: chex.Array):
+    def lrk(self, lr: Callable | float, k: int, gradient: chex.Array):
         greedy = 1 * (gradient == gradient.max(axis=1)[..., np.newaxis])
         greedy = greedy / greedy.sum(axis=1)[..., np.newaxis]
         pk = self.pi.probas
@@ -211,7 +225,7 @@ class JEQA(JAlgorithm):
         return lrk, dk
 
 
-class DPMD(JAlgorithm):
+class JDPMD(JAlgorithm):
     # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
     def __init__(self, pi: JPolicy, name: str, env: JTabular, horizon: int = None,
                  M_l: int=None, d: int=1, M_t: int = None, M_f: int = None):
@@ -303,7 +317,7 @@ class DPMD(JAlgorithm):
         return np.max(Q, axis=1)
 
 
-class DEQA(DPMD):
+class JDEQA(JDPMD):
     def __init__(self, env: JTabular, horizon: int = None, M_l: int = None, d: int = 1, M_t: int = None, M_f: int = None):
         pi = JSoftmaxPolicy(env.observation_space.n, env.action_space.n)
         name = f'{d}-EQA'
@@ -314,7 +328,7 @@ class DEQA(DPMD):
         return np.max(entropy(u, v, axis=1))
 
 
-class DPQA(DPMD):
+class JDPQA(JDPMD):
     def __init__(self, env: JTabular, horizon: int, M_l: int = None, d: int = 1, M_t: int = None, M_f: int = None):
         pi = JSoftmaxPolicy(env.observation_space, env.action_space)
         name = f'{d}-PQA'

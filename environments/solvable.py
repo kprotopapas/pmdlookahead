@@ -260,9 +260,9 @@ class Deepsea(Tabular):
     def __init__(self, size: int, gamma: float):
         self.size = size
 
-        n_obs = size**2
+        n_obs = size**2 + 1
         n_act = 2 # go left or right
-        self.grid = np.arange(n_obs).reshape((size, size))
+        self.grid = np.arange(size**2).reshape((size, size))
 
         mu = np.zeros((n_obs, ))
         mu[0] = 1
@@ -270,7 +270,8 @@ class Deepsea(Tabular):
         P = np.zeros((n_obs, n_obs, n_act))
         R = np.zeros((n_obs, n_act))
         R[:, 1] = -0.1 * gamma**size / size # TODO penalty different to bsuite...
-        R[-1, 1] = 1
+        R[-2, 1] = 1
+        R[-1, :] = 0
 
         for s in range(n_obs):
             for a in range(n_act):
@@ -283,27 +284,34 @@ class Deepsea(Tabular):
 
 
     def transition(self, state, action):
+        if state == self.size**2:
+            return state
+        
         pos = np.argwhere(self.grid == state)[0]
         dx = 2 * action - 1
         delta = np.where(pos[0] == self.size - 1, np.zeros((2,), dtype=np.int32), np.array([1, dx], dtype=np.int32))
 
         new_y, new_x = np.clip(pos + delta, 0, self.size - 1)
+
+        if pos[0] == self.size - 1:
+            return self.size**2
+        
         return self.grid[new_y, new_x]
     
 
     def step(self, action):
         state, action, info = super().step(action)
-        y, _ = np.argwhere(self.grid == info['s'])[0]
-        info["terminal"] = y == self.size - 1
+        info["terminal"] = state == self.n_obs - 1
         return state, action, info
     
 
     def __str__(self):
         grid_str = self.grid.astype('str')
-        y, x = np.argwhere(self.grid == self.state)[0]
-
         grid_str[-1, -1] = 'X'
-        grid_str[y, x] = '#'
+
+        if self.state != self.size**2:
+            y, x = np.argwhere(self.grid == self.state)[0]
+            grid_str[y, x] = '#'
 
         return str(grid_str)
 
