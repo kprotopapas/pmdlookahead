@@ -27,19 +27,22 @@ class JDeepsea(JTabular):
         self.goal = jnp.array([self.size, 0], dtype=jnp.int32)
 
 
-        num_actions = 2
-
-        P = jnp.zeros((size**2 + 1, size**2 + 1, num_actions))
-        R = jnp.zeros((size**2 + 1, 2)).at[:, 1].set(self.penalty)
-
-        for s in range(size**2 + 1):
+        def step(s, a):
             _, state = self.inverse(s)
-            for a in range(num_actions):
-                nstate = self.transition(state, a)
-                nobs = self.get_obs(nstate)
-                sp = self.index(nobs)
-                P = P.at[sp, s, a].set(1)
-        
+            nstate = self.transition(state, a)
+            nobs = self.get_obs(nstate)
+            sp = self.index(nobs)
+            return jnp.zeros((size**2 + 1)).at[sp].set(1)
+
+
+        states = jnp.arange(size**2 + 1)
+        actions = jnp.arange(2)
+
+        over_states = jax.vmap(step, (0, None), 1)
+        over_both = jax.vmap(over_states, (None, 0), 2)
+        P = over_both(states, actions)
+
+        R = jnp.zeros((size**2 + 1, 2)).at[:, 1].set(self.penalty)
         R = R.at[size**2 - 1, 1].set(1)
         R = R.at[size**2, :].set(0)
         mu = jnp.zeros((size**2 + 1, )).at[0].set(1)
