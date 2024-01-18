@@ -75,6 +75,7 @@ if __name__ == '__main__':
     env = JDeepsea(size, gamma)
 
     H = 2 * horizon
+    M_f = 16
 
     infos = []
     

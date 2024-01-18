@@ -20,7 +20,7 @@ class EnvParams:
 
 
 class JTabular(Environment):
-    def __init__(self, P: chex.Array, R: chex.Array, mu: chex.Array, gamma: float):
+    def __init__(self, P: chex.Array, R: chex.Array, mu: chex.Array, gamma: float, name: str):
         super().__init__()
         self.n_states = P.shape[0]
         self._n_actions = P.shape[2]
@@ -28,6 +28,7 @@ class JTabular(Environment):
         self.R = R
         self.mu = mu
         self.gamma = gamma
+        self.display_name = name
 
 
     @partial(jax.jit, static_argnums=(0, ))

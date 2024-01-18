@@ -47,7 +47,7 @@ class JDeepsea(JTabular):
         R = R.at[size**2, :].set(0)
         mu = jnp.zeros((size**2 + 1, )).at[0].set(1)
 
-        super().__init__(P, R, mu, gamma)
+        super().__init__(P, R, mu, gamma, f'Deepsea')
 
     
     @partial(jax.jit, static_argnums=(0,))
@@ -57,7 +57,7 @@ class JDeepsea(JTabular):
         return self.get_obs(state), state
     
 
-
+    @partial(jax.jit, static_argnums=(0, ))
     def transition(self, state: EnvState, action: int) -> EnvState:
         position = state.pos
 
@@ -92,22 +92,27 @@ class JDeepsea(JTabular):
         return new_obs, new_state, reward, done, {}
     
 
+    @partial(jax.jit, static_argnums=(0,))
     def get_obs(self, state: EnvState) -> Array:
         ind = jnp.sum(jnp.array([self.size, 1]) * state.pos).astype(jnp.int32)
-        return jnp.zeros((self.size**2, )).at[ind].set(1)
+        return jnp.zeros((self.size**2 + 1, )).at[ind].set(1)
+
     
     @property
     def embedding(self) -> chex.Array:
         return jnp.array([self.size, 1])
-    
-    @partial(jax.jit, static_argnums=(0,))
-    def inverse(self, state_index: int) -> tuple[chex.Array, EnvState]:
-        obs = jnp.zeros((self.size**2, )).at[state_index].set(1)
-        row = state_index // self.size
-        col = state_index % self.size
-        pos = jnp.array([row, col])
-        return obs, EnvState(pos)
 
     @partial(jax.jit, static_argnums=(0,))
     def index(self, obs: chex.Array) -> int:
         return jnp.where(jnp.any(obs > 0), jnp.argmax(obs), self.size**2)
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def inverse(self, state_index: int) -> tuple[chex.Array, EnvState]:
+        row = state_index // self.size
+        col = state_index % self.size
+
+        pos = jnp.array([row, col])
+        state = EnvState(pos)
+        
+        obs = self.get_obs(state)
+        return obs, state

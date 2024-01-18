@@ -8,6 +8,7 @@ import logging
 import time
 import jax
 from functools import partial
+import os
 
 from scipy.stats import entropy
 from gymnax.environments.environment import Environment
@@ -49,7 +50,14 @@ class JAlgorithm(object):
         
             run = wandb.init(project="rl_experiments", config=config, group=group, entity='kprotopapas')
 
-        old = 0
+        backup = f'{env.display_name}-{env.size}-{env.gamma}.npy'
+        if backup in os.listdir('backups'):
+            optimal = jnp.load(f'backups/{backup}', allow_pickle=True)
+        else:
+            optimal = env.optimal()
+        
+        V_opt = optimal.max(axis=1)
+        old = np.max(V_opt)
 
         for k in range(epochs):
             key = jax.random.PRNGKey(seed * k)
@@ -66,7 +74,7 @@ class JAlgorithm(object):
             duration = time.time() - start
             info.append(metrics)
 
-            improvement = reward - old
+            improvement = old - reward
             old = reward
 
             if verbose:
