@@ -84,7 +84,6 @@ class Tabular(gym.Env):
 
     # Finds the optimal value function via policy iteration
     def optimal(self):
-        gamma = self.gamma
         Q = np.zeros_like(self.R)
 
         pi = 1 * (Q == Q.max(axis=1)[..., np.newaxis])
@@ -284,16 +283,17 @@ class Deepsea(Tabular):
 
 
     def transition(self, state, action):
-        y, x = np.argwhere(self.grid == state)[0]
-        mv = (2 * action - 1) * (y != self.size - 1)
+        pos = np.argwhere(self.grid == state)[0]
+        dx = 2 * action - 1
+        delta = np.where(pos[0] == self.size - 1, np.zeros((2,), dtype=np.int32), np.array([1, dx], dtype=np.int32))
 
-        new_y, new_x = np.array([y + 1, x + mv], dtype=np.int8).clip(0, self.size - 1)
+        new_y, new_x = np.clip(pos + delta, 0, self.size - 1)
         return self.grid[new_y, new_x]
     
 
     def step(self, action):
         state, action, info = super().step(action)
-        y, _ = np.argwhere(self.grid == self.state)[0]
+        y, _ = np.argwhere(self.grid == info['s'])[0]
         info["terminal"] = y == self.size - 1
         return state, action, info
     
@@ -301,9 +301,9 @@ class Deepsea(Tabular):
     def __str__(self):
         grid_str = self.grid.astype('str')
         y, x = np.argwhere(self.grid == self.state)[0]
-        grid_str[y, x] = '#'
 
         grid_str[-1, -1] = 'X'
+        grid_str[y, x] = '#'
 
         return str(grid_str)
 

@@ -49,7 +49,8 @@ class JDeepsea(JTabular):
         new_state = EnvState(newpos)
 
         right_penalty = -0.1 * self.gamma**self.size / self.size # TODO different penalty to bsuite
-        reward = action * jnp.where(newpos[1] == self.size, 1, right_penalty)
+        goal = (newpos[1] == self.size) & (newpos[0] == self.size)
+        reward = action * jnp.where(goal, 1, right_penalty)
         reward = jnp.where(done, 0, reward)
         
         done = newpos[0] >= self.size
