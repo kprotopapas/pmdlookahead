@@ -86,7 +86,7 @@ class JAlgorithm(object):
             V = jnp.sum(self.pi.probas * Q, axis=1)
             
             sub = float(jnp.dot(self.env.mu, V_opt - V))
-            metrics = {'suboptimality': sub, 'divergence': dk, 'learning_rate': lk}
+            metrics = {'suboptimality': sub, 'divergence': np.float32(dk), 'learning_rate': np.float32(lk), 'epoch': k}
             
             if not exact:
                 metrics['grad_error'] = float(jnp.max(jnp.abs(grad - grad_exact)))
