@@ -68,9 +68,9 @@ class JAlgorithm(object):
             Q = self.env.Q(self.pi)
             
             value_key, grad_key = jax.random.split(key, 2)
-            grad_exact = self.grad_exact(key, env, params, Q)
+            grad_exact = self.grad_exact(key, env, params, Q, self.pi)
             Q_est = self.estimate_value(value_key, env, params, self.pi)
-            grad = self.grad(grad_key, env, params, Q_est)
+            grad = self.grad(grad_key, env, params, Q_est, self.pi)
 
             gradient = jnp.where(exact, grad_exact, grad)
 
@@ -224,11 +224,11 @@ class JAlgorithm(object):
         raise NotImplementedError
     
     @partial(jax.jit, static_argnums=(0, 2))
-    def grad(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray):
-        return self.grad_exact(key, env, params, Q)
+    def grad(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray, pi: JPolicy):
+        return self.grad_exact(key, env, params, Q, pi)
     
     @partial(jax.jit, static_argnums=(0, 2))
-    def grad_exact(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray):
+    def grad_exact(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray, pi: JPolicy):
         return Q
 
 
@@ -309,7 +309,7 @@ class JDPMD(JAlgorithm):
 
     
     @partial(jax.jit, static_argnums=(0, 2))
-    def grad(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, V: jnp.ndarray):
+    def grad(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, V: jnp.ndarray, pi: JPolicy):
         body = lambda _, y: self.approx_bellman(key, env, params, y)
         
         tdm = jax.lax.fori_loop(0, self.d - 1, body, V)
