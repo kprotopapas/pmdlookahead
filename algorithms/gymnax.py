@@ -29,6 +29,7 @@ class JAlgorithm(object):
         self.pi = pi
         self.name = name
         self.env = env
+        self.samples = 0
 
 
     def learn(self, epochs: int = 1000, lr: Callable | float = 1,
@@ -69,8 +70,9 @@ class JAlgorithm(object):
             
             value_key, grad_key = jax.random.split(key, 2)
             grad_exact = self.grad_exact(key, env, params, Q, self.pi)
-            Q_est = self.estimate_value(value_key, env, params, self.pi)
-            grad = self.grad(grad_key, env, params, Q_est, self.pi)
+            Q_est, value_samples = self.estimate_value(value_key, env, params, self.pi)
+            grad, grad_samples = self.grad(grad_key, env, params, Q_est, self.pi)
+            self.samples += value_samples + grad_samples
 
             gradient = jnp.where(exact, grad_exact, grad)
 
@@ -85,15 +87,14 @@ class JAlgorithm(object):
             
             sub = float(jnp.dot(self.env.mu, V_opt - V))
             right_probability = jnp.mean(self.pi.probas[:, 1])
-            metrics = {'suboptimality': sub, 'epoch': k, 'divergence': dk, 'learning_rate': lk,
-                       'right_probability': right_probability}
+            metrics = {'suboptimality': sub, 'divergence': dk, 'learning_rate': lk}
             
             if not exact:
                 metrics['grad_error'] = jnp.max(jnp.abs(grad - grad_exact))
                 greedy_exact = jnp.argmax(grad_exact, axis=1)
                 greedy = jnp.argmax(grad, axis=1)
                 count = jnp.count_nonzero(jnp.logical_xor(greedy_exact, greedy))
-                metrics['diff_greedy'] = count
+                metrics['samples'] = self.samples
 
             duration = time.time() - start
             info.append(metrics)
@@ -204,7 +205,7 @@ class JAlgorithm(object):
 
         Q_all = over_keys(keys, obs_batch, state_batch, priors_batch)
 
-        return jnp.mean(Q_all, axis=0)
+        return jnp.mean(Q_all, axis=0), self.n_trajectories * env.n_states * env.num_actions * self.horizon
     
 
     @partial(jax.jit, static_argnums=(0, 2, 4))
@@ -225,7 +226,7 @@ class JAlgorithm(object):
     
     @partial(jax.jit, static_argnums=(0, 2))
     def grad(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray, pi: JPolicy):
-        return self.grad_exact(key, env, params, Q, pi)
+        return self.grad_exact(key, env, params, Q, pi), 0
     
     @partial(jax.jit, static_argnums=(0, 2))
     def grad_exact(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray, pi: JPolicy):
@@ -331,7 +332,7 @@ class JDPMD(JAlgorithm):
 
         Q = over_keys(keys, state_batch, action_batch).mean(axis=0)
 
-        return Q
+        return Q, env.n_states * env.num_actions * self.M_f + env.n_states * env.num_actions * self.M_t * self.d - 1
 
 
 
@@ -385,7 +386,7 @@ class JDPMD(JAlgorithm):
         keys = jax.random.split(key, self.n_trajectories)
         V_all = over_keys(keys, obs_batch, state_batch)
 
-        return jnp.mean(V_all, axis=0)
+        return jnp.mean(V_all, axis=0), env.n_states * self.n_trajectories * self.horizon
 
     
 
