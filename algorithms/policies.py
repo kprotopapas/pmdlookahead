@@ -141,10 +141,10 @@ class JPolicy(object):
     
 @chex.dataclass(kw_only=True)
 class JDirectPolicy(JPolicy):
-    probas: chex.Array
+    params: chex.Array
 
     def act(self, obs: chex.Array) -> chex.Array:
-        return jnp.log(jnp.matmul(self.probas.T, obs))
+        return jnp.log(jnp.matmul(self.params.T, obs))
     
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
         if jnp.isinf(lr):
@@ -152,17 +152,22 @@ class JDirectPolicy(JPolicy):
             probas /= probas.sum(axis=1)[..., jnp.newaxis]
             return JDirectPolicy(probas=probas)
         
-        new = self.probas + lr * grad
-        over_axis = jax.vmap(jax_simplex_project_sort, (0, None))
+        new = self.params + lr * grad
+        over_axis = jax.vmap(jax_simplex_project_sort, (0,))
         probas = over_axis(new - new.mean(axis=1)[..., jnp.newaxis])
 
         return JDirectPolicy(probas=probas)
+    
+    @property
+    def probas(self):
+        return self.params
     
 
     @staticmethod
     def uniform(n_states: int, n_actions: int) -> JDirectPolicy:
         probas = jnp.ones((n_states, n_actions), dtype=jnp.float32) / n_actions
-        return JDirectPolicy(probas=probas)
+        return JDirectPolicy(params=probas)
+
 
 
 @chex.dataclass(kw_only=True)
@@ -179,7 +184,7 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
         new = self.logits + lr * grad
         new_centered = new - new.max(axis=1)[..., jnp.newaxis] # renormalize by max
 
-        argmax = jnp.where(grad == grad.max(axis=1)[..., jnp.newaxis], jnp.inf, -jnp.inf)
+        argmax = jnp.where(grad == grad.max(axis=1)[..., jnp.newaxis], 0, -jnp.inf)
         logits = jnp.where(jnp.isinf(lr), argmax, new_centered)
 
         return JSoftmaxPolicy(logits=logits)

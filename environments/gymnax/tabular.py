@@ -49,6 +49,10 @@ class JTabular(Environment):
     def inverse(self, state_ind: int) -> tuple[chex.Array, EnvState]:
         raise NotImplementedError
     
+    @partial(jax.jit, static_argnums=(0,))
+    def index(self, obs: chex.Array) -> int:
+        raise NotImplementedError
+    
         
     @property
     def num_actions(self) -> int:
@@ -111,3 +115,11 @@ class JTabular(Environment):
         Q, Q_new = jax.lax.while_loop(cond, step, (Q, Q_new))
 
         return Q_new
+    
+    # Bellman maximisation operator (VI operator)
+    @partial(jax.jit, static_argnums=(0,))
+    def bellman(self, V):
+        next_V = jnp.sum(self.P * V[..., jnp.newaxis, jnp.newaxis], axis=0)
+        Q = self.R + self.gamma * next_V
+        TV = jnp.max(Q, axis=1)
+        return TV

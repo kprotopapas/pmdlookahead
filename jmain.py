@@ -14,12 +14,13 @@ def run(d=1):
     if alg == PGMCTS:
         agent = alg(env, horizon=H, d=d, M_t=M_t, seed=seed) # time per iteration 0.3 s
     elif alg in [JDPQA, JDEQA]:
-        agent = alg(env, horizon=H, d=d, M_t=M_t, M_l=None)
+        agent = alg(env, horizon=H, d=d, M_t=M_t, M_l=M_l, M_f=M_f)
     else:
-        agent = alg(env, horizon=H, n_trajectories=1) # time per iteration 0.008 s
+        agent = alg(env, horizon=H, n_trajectories=M_f) # time per iteration ~10s
         
     start = time.time()
-    info_dpmd = agent.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr, group=group)
+    info_dpmd = agent.learn(epochs, exact=exact, use_wandb=use_wandb,
+                            verbose=True, lr=lr, group=group, seed=seed)
     time_dpmd = time.time() - start
     print(f'{alg.__name__} with depth {d} took time {time_dpmd}')
 
@@ -70,19 +71,35 @@ if __name__ == '__main__':
     R = random_simplex((size, 4))
     mu = random_simplex((size,))
     
-    #env = Tabular(P, R, mu, gamma)
+    #env = JTabular(P, R, mu, gamma, 'Stochastic')
     #env = Trap(size, gamma)
     env = JDeepsea(size, gamma)
 
-    H = 2 * horizon
-    M_f = 16
+    # Formula from (Johnson 2023)
+    epsilon = 1e-4
+    delta = 0.01
+    K = np.log(4 / ((1 - gamma) * epsilon)) / (1 - gamma)
+    H = np.log(16 / (epsilon * np.power(1 - gamma, 3))) / (1 - gamma)
+    M_f = np.power(gamma, - 2 * H) * np.log(2 * K * env.n_states * env.num_actions / delta) / 2
+
+    K, H, M_f = int(np.ceil(K)), int(np.ceil(H)), int(np.ceil(M_f))
+
+    print(f'K: {K}')
+    print(f'H: {H}')
+    print(f'M_f: {M_f}')
+
+
+    H = size # fixed for deepsea because larger doesn't matter
+    M_f = 1 # deterministic
+    M_t = 1 # deterministic
+    M_l = 16 # otherwise way too big
 
     infos = []
     
     # TRY WITH LOGISTIC LEARNING RATE
 
     a = lr
-    #lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
+    lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
     #ys = [lr(k) for k in range(epochs)]
 
     for _ in range(n_agents):
@@ -92,7 +109,7 @@ if __name__ == '__main__':
     for df in infos:
         df.suboptimality.plot()
 
-    plt.yscale('log')
+    #plt.yscale('log')
     plt.show()
 
     print('Finished, exiting...')

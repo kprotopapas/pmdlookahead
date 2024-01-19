@@ -57,28 +57,45 @@ class JAlgorithm(object):
             optimal = env.optimal()
         
         V_opt = optimal.max(axis=1)
-        old = np.max(V_opt)
+        V = env.V(self.pi)
+        old = jnp.dot(self.env.mu, V_opt - V)
+
 
         for k in range(epochs):
             key = jax.random.PRNGKey(seed * k)
             start = time.time()
             
-            Q = self.estimate_value(key, env, params)
-            gradient = self.grad(Q)
-            lk, dk = self.lrk(lr, k, Q)
-            self.pi = self.pi.update(gradient, lk)
+            Q = self.env.Q(self.pi)
+            
+            if exact:
+                gradient = self.grad_exact(key, env, params, Q)
+            else:
+                Q_est = self.estimate_value(key, env, params)
+                gradient = self.grad(key, env, params, Q_est)
 
-            reward = self.evaluate(key, env, params, 16)
-            metrics = {'reward': reward}
+            lk, dk = self.lrk(lr, k, gradient)
+            new_pi = self.pi.update(gradient, lk)
+            if jnp.any(jnp.isnan(new_pi.probas)):
+                pass
+            self.pi = new_pi
+
+
+            V = jnp.sum(self.pi.probas * Q, axis=1)
+            
+            sub = float(jnp.dot(self.env.mu, V_opt - V))
+
+            metrics = {'suboptimality': sub, 'epoch': k, 'divergence': dk, 'learning_rate': lk}
 
             duration = time.time() - start
             info.append(metrics)
 
-            improvement = old - reward
-            old = reward
+            improvement = old - sub
+            old = sub
+            V = self.env.V(self.pi)
+            sub = jnp.dot(self.env.mu, V_opt - V)
 
             if verbose:
-                logging.info(f'Epoch: {k}, reward: {reward:06f}, in time: {duration:06f}, improvement: {improvement:06f}')
+                logging.info(f'Epoch: {k}, suboptimality: {sub:06f}, in time: {duration:06f}, improvement: {improvement:06f}')
 
             if use_wandb:
                 wandb.log(metrics)
@@ -174,7 +191,12 @@ class JAlgorithm(object):
     def lrk(self, lr, k: int, gradient: chex.Array):
         raise NotImplementedError
     
-    def grad(self, Q):
+    @partial(jax.jit, static_argnums=(0, 2))
+    def grad(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray):
+        return self.grad_exact(Q)
+    
+    @partial(jax.jit, static_argnums=(0, 2))
+    def grad_exact(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray):
         return Q
 
 
@@ -210,6 +232,8 @@ class JPQA(JAlgorithm):
             return 0, 0
         
         lrk = dk / self.env.gamma**(2*(k + 1))
+        if callable(lr):
+            return lr(k), dk
         return lrk, dk
     
 
@@ -230,6 +254,8 @@ class JEQA(JAlgorithm):
             return 0, 0
         
         lrk = dk / self.env.gamma**(2*(k + 1))
+        if callable(lr):
+            return lr(k), dk
         return lrk, dk
 
 
@@ -250,32 +276,42 @@ class JDPMD(JAlgorithm):
         self.config['n_final'] = M_f
 
     
-    def grad(self, V):
-        tdm = V
-        for _ in range(self.d - 1):
-            tdm = self.approx_bellman(tdm)
+    @partial(jax.jit, static_argnums=(0, 2))
+    def grad(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, V: jnp.ndarray):
+        body = lambda _, y: self.approx_bellman(key, env, params, y)
         
-        Q_d = np.zeros_like(self.env.R)
-        for s in range(self.env.n_obs):
-            for a in range(self.env.n_act):
-                for _ in range(self.M_f):
-                    self.env.state = s
-                    sp, r, _ = self.env.step(a)
-                    Q_d[s, a] += r + self.gamma * tdm[sp]
-                        
-        Q_d /= self.M_f
-        return Q_d
+        tdm = jax.lax.fori_loop(0, self.d - 1, body, V)
+
+        def value(key, state, action):
+            nobs, nstate, reward, done, _ = env.step(key, state, action, params)
+            nind = env.index(nobs)
+            return reward + self.env.gamma * tdm[nind]
+        
+        state_nums = jnp.arange(env.n_states)
+        inverse = lambda s: env.inverse(s)
+        obs_batch, state_batch = jax.vmap(inverse, (0,))(state_nums)
+        action_batch = jnp.arange(env.num_actions)
+        keys = jax.random.split(key, self.M_t)
+        
+        over_states = jax.vmap(value, (None, 0, None), 0)
+        over_actions = jax.vmap(over_states, (None, None, 0), 1)
+        over_keys = jax.vmap(over_actions, (0, None, None), 0)
+
+        Q = over_keys(keys, state_batch, action_batch).mean(axis=0)
+
+        return Q
 
 
-    def grad_exact(self, Q):
+
+    @partial(jax.jit, static_argnums=(0, 2))
+    def grad_exact(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray):
         V = np.sum(self.pi.probas * Q, axis=1)
-        tdm = V
 
-        for _ in range(self.d - 1):
-            tdm = self.env.bellman(tdm)
+        body = lambda _, y: env.bellman(y)
+        tdm = jax.lax.fori_loop(0, self.d - 1, body, V)
 
-        next_Vd = self.env.P.transpose((2, 1, 0)) @ tdm
-        Qd = self.env.R + self.gamma * next_Vd.transpose((1, 0))
+        next_Vd = jnp.matmul(self.env.P.transpose((2, 1, 0)), tdm)
+        Qd = self.env.R + self.env.gamma * next_Vd.transpose((1, 0))
         return Qd
 
 
@@ -288,7 +324,7 @@ class JDPMD(JAlgorithm):
         if dk == 0: # CONVERGED! V* = TV*
             return 0, 0
 
-        lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d) #TODO MAKE adaptive
+        lrk = lr(k) * dk if callable(lr) else lr * dk / self.env.gamma**(2*(k + 1) * self.d) #TODO MAKE adaptive
         if np.isinf(lrk) or np.isnan(lrk):
             lrk = np.inf
         return lrk, dk
@@ -297,37 +333,57 @@ class JDPMD(JAlgorithm):
     def divergence(self, u, v):
         raise NotImplementedError
     
+    
+    @partial(jax.jit, static_argnums=(0, 2))
+    def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams) -> chex.Array:
+        priors = jnp.zeros((self.horizon, env.num_actions))
 
-    def estimate_value(self):
-        V_l = np.zeros((self.env.observation_space.n, ))
-        for s in range(self.env.n_obs):
-            for t in range(self.M_l):
-                states, actions, rewards = self.sample_trajectory(s)
-                rtg = self.reward_to_go(rewards)
-                V_l[s] += rtg[0]
-            
-            V_l[s] /= self.M_l
+        def value(value_key, obs, state):
+            _, _, rewards = self.sample_trajectory_from_state(value_key, env, params, obs, state, priors)
+            rtg = self.reward_to_go(rewards)
+            return rtg[0]
+
+        over_states = jax.vmap(value, (None, 0, 0))
+        over_keys = jax.vmap(over_states, (0, None, None))
         
-        return V_l
+        state_nums = jnp.arange(env.n_states)
+        inverse = lambda s: env.inverse(s)
+        obs_batch, state_batch = jax.vmap(inverse, (0,))(state_nums)
 
+        keys = jax.random.split(key, self.n_trajectories)
+        V_all = over_keys(keys, obs_batch, state_batch)
 
-    def approx_bellman(self, V):
-        Q = np.zeros((self.env.observation_space.n, self.env.action_space.n))
+        return jnp.mean(V_all, axis=0)
 
-        for s in range(self.env.n_obs):
-            for a in range(self.env.n_act):
-                for t in range(self.M_t):
+    
 
-                    self.env.state = s
-                    sp, r, _ = self.env.step(a)
-                    Q[s, a] = r + self.env.gamma * V[sp]
+    @partial(jax.jit, static_argnums=(0, 2))
+    def approx_bellman(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, V: jnp.ndarray):
+        state_nums = jnp.arange(env.n_states)
+
+        def value(key, state, action):
+            nobs, nstate, reward, done, _ = env.step(key, state, action, params)
+            nind = env.index(nobs)
+            return reward + self.env.gamma * V[nind]
+        
+        inverse = lambda s: env.inverse(s)
+        obs_batch, state_batch = jax.vmap(inverse, (0,))(state_nums)
+        action_batch = jnp.arange(env.num_actions)
+        keys = jax.random.split(key, self.M_t)
+        
+        over_states = jax.vmap(value, (None, 0, None), 0)
+        over_actions = jax.vmap(over_states, (None, None, 0), 1)
+        over_keys = jax.vmap(over_actions, (0, None, None), 0)
+
+        Q = over_keys(keys, state_batch, action_batch).mean(axis=0)
 
         return np.max(Q, axis=1)
+    
 
 
 class JDEQA(JDPMD):
     def __init__(self, env: JTabular, horizon: int = None, M_l: int = None, d: int = 1, M_t: int = None, M_f: int = None):
-        pi = JSoftmaxPolicy(env.observation_space.n, env.action_space.n)
+        pi = JSoftmaxPolicy.uniform(env.n_states, env.num_actions)
         name = f'{d}-EQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
@@ -338,10 +394,10 @@ class JDEQA(JDPMD):
 
 class JDPQA(JDPMD):
     def __init__(self, env: JTabular, horizon: int, M_l: int = None, d: int = 1, M_t: int = None, M_f: int = None):
-        pi = JSoftmaxPolicy(env.observation_space, env.action_space)
+        pi = JDirectPolicy.uniform(env.n_states, env.num_actions)
         name = f'{d}-PQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
 
     def divergence(self, u, v): # Total variation divergence
-        return np.max(np.linalg.norm(u - v, axis=1)**2 / 2)
+        return jnp.max(jnp.linalg.norm(u - v, axis=1)**2 / 2)

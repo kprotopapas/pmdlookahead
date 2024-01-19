@@ -19,7 +19,8 @@ def simplex_project_sort(v: np.ndarray, z: float = 1):
 
 
 @jax.jit
-def jax_simplex_project_sort(v: jnp.ndarray, z: float = 1):
+def jax_simplex_project_sort(v: jnp.ndarray):
+    z = 1
     n_features = v.shape[0]
     u = jnp.sort(v)[::-1]
     cssv = jnp.cumsum(u) - z
@@ -29,6 +30,48 @@ def jax_simplex_project_sort(v: jnp.ndarray, z: float = 1):
     theta = cssv[cond][-1] / jnp.float32(rho)
     w = jnp.maximum(v - theta, 0)
     return w
+
+
+@jax.jit
+def jax_simplex_project_bijection(v: jnp.ndarray):
+    z = 1
+    tau = 0.0001
+    max_iter = 1000
+
+    func = lambda x: jnp.sum(jnp.maximum(v - x, 0)) - z
+    lower = jnp.min(v) - z / len(v)
+    upper = jnp.max(v)
+    midpoint = (upper + lower) / 2.0
+    value = func(midpoint)
+
+    for it in range(max_iter):
+        if abs(value) <= tau:
+            break
+
+        if value <= 0:
+            upper = midpoint
+        else:
+            lower = midpoint
+
+    def cond(a: tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]):
+        lower, midpoint, upper, value, it = a
+        return (jnp.abs(value) > tau) & (it < max_iter)
+
+    def step(a: tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]):
+        lower, midpoint, upper, value, it = a
+        midpoint = (upper + lower) / 2
+        value = func(midpoint)
+
+        upper = jnp.where(value <= 0, midpoint, upper)
+        lower = jnp.where(value > 0, midpoint, lower)
+        return lower, midpoint, upper, value, it + 1
+    
+
+    start = lower, midpoint, upper, value, 0
+    lower, midpoint, upper, value, it = jax.lax.while_loop(cond, step, start)
+
+    return np.maximum(v - midpoint, 0)
+
 
 
 def random_simplex(shape: tuple):

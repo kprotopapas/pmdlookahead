@@ -17,7 +17,7 @@ def run(d=1):
     elif alg in [DPQA, DEQA]:
         agent = alg(env, horizon=H, d=d, M_t=M_t, M_l=None)
     else:
-        agent = alg(env, horizon=H, n_trajectories=1) # time per iteration 0.008 s
+        agent = alg(env, horizon=H, n_trajectories=16) # time per iteration 0.008 s
         
     start = time.time()
     info_dpmd = agent.learn(epochs, exact=exact, use_wandb=use_wandb, verbose=True, lr=lr, group=group)
