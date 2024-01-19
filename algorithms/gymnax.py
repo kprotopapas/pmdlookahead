@@ -86,22 +86,17 @@ class JAlgorithm(object):
             V = jnp.sum(self.pi.probas * Q, axis=1)
             
             sub = float(jnp.dot(self.env.mu, V_opt - V))
-            right_probability = jnp.mean(self.pi.probas[:, 1])
             metrics = {'suboptimality': sub, 'divergence': dk, 'learning_rate': lk}
             
             if not exact:
-                metrics['grad_error'] = jnp.max(jnp.abs(grad - grad_exact))
-                greedy_exact = jnp.argmax(grad_exact, axis=1)
-                greedy = jnp.argmax(grad, axis=1)
-                count = jnp.count_nonzero(jnp.logical_xor(greedy_exact, greedy))
-                metrics['samples'] = self.samples
+                metrics['grad_error'] = float(jnp.max(jnp.abs(grad - grad_exact)))
+                metrics['samples'] = int(self.samples)
 
             duration = time.time() - start
             info.append(metrics)
 
             improvement = old - sub
             old = sub
-            sub = jnp.dot(self.env.mu, V_opt - V)
 
             if verbose:
                 logging.info(f'Epoch: {k}, suboptimality: {sub:06f}, in time: {duration:06f}, improvement: {improvement:06f}')
