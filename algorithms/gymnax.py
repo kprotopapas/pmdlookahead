@@ -85,11 +85,11 @@ class JAlgorithm(object):
 
             V = jnp.sum(self.pi.probas * Q, axis=1)
             
-            sub = float(jnp.dot(self.env.mu, V_opt - V))
+            sub = float(np.dot(self.env.mu, V_opt - V))
             metrics = {'suboptimality': sub, 'divergence': dk, 'learning_rate': lk}
             
             if not exact:
-                metrics['grad_error'] = float(jnp.max(jnp.abs(grad - grad_exact)))
+                metrics['grad_error'] = float(np.max(np.abs(grad - grad_exact)))
                 metrics['samples'] = int(self.samples)
 
             duration = time.time() - start
