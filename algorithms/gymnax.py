@@ -67,11 +67,12 @@ class JAlgorithm(object):
             
             Q = self.env.Q(self.pi)
             
-            if exact:
-                gradient = self.grad_exact(key, env, params, Q)
-            else:
-                Q_est = self.estimate_value(key, env, params)
-                gradient = self.grad(key, env, params, Q_est)
+            value_key, grad_key = jax.random.split(key, 2)
+            grad_exact = self.grad_exact(key, env, params, Q)
+            Q_est = self.estimate_value(value_key, env, params, self.pi)
+            grad = self.grad(grad_key, env, params, Q_est)
+
+            gradient = jnp.where(exact, grad_exact, grad)
 
             lk, dk = self.lrk(lr, k, gradient)
             new_pi = self.pi.update(gradient, lk)
@@ -83,8 +84,16 @@ class JAlgorithm(object):
             V = jnp.sum(self.pi.probas * Q, axis=1)
             
             sub = float(jnp.dot(self.env.mu, V_opt - V))
-
-            metrics = {'suboptimality': sub, 'epoch': k, 'divergence': dk, 'learning_rate': lk}
+            right_probability = jnp.mean(self.pi.probas[:, 1])
+            metrics = {'suboptimality': sub, 'epoch': k, 'divergence': dk, 'learning_rate': lk,
+                       'right_probability': right_probability}
+            
+            if not exact:
+                metrics['grad_error'] = jnp.max(jnp.abs(grad - grad_exact))
+                greedy_exact = jnp.argmax(grad_exact, axis=1)
+                greedy = jnp.argmax(grad, axis=1)
+                count = jnp.count_nonzero(jnp.logical_xor(greedy_exact, greedy))
+                metrics['diff_greedy'] = count
 
             duration = time.time() - start
             info.append(metrics)
@@ -117,42 +126,66 @@ class JAlgorithm(object):
     
     
     @partial(jax.jit, static_argnums=(0, 2))
-    def sample_trajectory(self, key: chex.PRNGKey, env: JTabular, params: EnvParams):
+    def sample_trajectory(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, pi: JPolicy):
         env_key, action_key = jax.random.split(key)
         obs, state = env.reset(env_key, params)
         priors = jnp.zeros((self.horizon, env.num_actions))
 
-        return self.sample_trajectory_from_state(action_key, env, params, obs, state, priors)
+        return self.sample_trajectory_from_state(action_key, env, params, obs, state, priors, pi)
     
     
     @partial(jax.jit, static_argnums=(0, 2))
     def sample_trajectory_from_state(self, key: chex.PRNGKey, env: JTabular, params: EnvParams,
-                          obs: chex.Array, state: EnvState, priors: chex.Array):
+                          obs: chex.Array, state: EnvState, priors: chex.Array, pi: JPolicy):
         
-        def step(a: tuple[chex.PRNGKey, chex.Array, EnvState, JPolicy, jnp.bool_], prior: chex.Array):
-            key, obs, state, pi, old_done = a
-            key, action_key = jax.random.split(key)
+        def step(a: tuple[chex.PRNGKey, chex.Array, EnvState, jnp.bool_], prior: chex.Array):
+            key, obs, state, old_done = a
+            nkey, action_key = jax.random.split(key)
             logits = pi.act(obs)
             action = jax.random.categorical(action_key, logits + prior)
-            nobs, nstate, reward, done, _ = env.step(key, state, action, params)
+            nobs, nstate, reward, done, _ = env.step(nkey, state, action, params)
             reward = jnp.where(old_done, 0, reward)
-            return (key, nobs, nstate, pi, done | old_done), (obs, action, reward)
+            return (nkey, nobs, nstate, done | old_done), (obs, action, reward)
 
 
-        carry, ys = jax.lax.scan(step, (key, obs, state, self.pi, jnp.bool_(False)), priors, length=self.horizon)
+        carry, ys = jax.lax.scan(step, (key, obs, state, jnp.bool_(False)), priors, length=self.horizon)
 
-        key, obs, state, _, done = carry
+        nkey, nobs, nstate, done = carry
         observations, actions, rewards = ys
         observations = jnp.vstack(([obs, observations]))
 
 
         return observations, actions, rewards # TODO for more advanced, flag "done" states as invalid...
+    
+    @partial(jax.jit, static_argnums=(0, 2))
+    def debug(self, key: chex.PRNGKey, env: JTabular, params: EnvParams,
+                          obs: chex.Array, state: EnvState, priors: chex.Array, pi: JPolicy):
+        
+        def step(a: tuple[chex.PRNGKey, chex.Array, EnvState, jnp.bool_], prior: chex.Array):
+            key, obs, state, old_done = a
+            nkey, action_key = jax.random.split(key)
+            logits = pi.act(obs)
+            belief = logits + prior
+            action = jax.random.categorical(action_key, belief)
+            nobs, nstate, reward, done, _ = env.step(nkey, state, action, params)
+            reward = jnp.where(old_done, 0, reward)
+            return (nkey, nobs, nstate, done | old_done), (obs, action, reward, belief)
+
+
+        carry, ys = jax.lax.scan(step, (key, obs, state, jnp.bool_(False)), priors, length=self.horizon)
+
+        nkey, nobs, nstate, done = carry
+        observations, actions, rewards, beliefs = ys
+        observations = jnp.vstack(([obs, observations]))
+
+
+        return observations, actions, rewards, beliefs # TODO for more advanced, flag "done" states as invalid...
 
 
     @partial(jax.jit, static_argnums=(0, 2))
-    def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams):
+    def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, pi: JPolicy):
         def value(value_key, obs, state, priors):
-            _, _, rewards = self.sample_trajectory_from_state(value_key, env, params, obs, state, priors)
+            _, _, rewards = self.sample_trajectory_from_state(value_key, env, params, obs, state, priors, pi)
             rtg = self.reward_to_go(rewards)
             return rtg[0]
 
@@ -202,7 +235,7 @@ class JAlgorithm(object):
 
 class JPolicyIteration(JAlgorithm):
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int, pi: JPolicy):
-        super().__init__(env, horizon, n_trajectories, pi, 'PI')
+        super().__init__(env, horizon, n_trajectories, pi, 'JPI')
 
 
     def lrk(self, lr, k: int, gradient: chex.Array):
@@ -212,14 +245,14 @@ class JPolicyIteration(JAlgorithm):
 class JREINFORCE(JAlgorithm):
     # Projected Policy Gradient Ascent using REINFORCE
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int, pi: JPolicy):
-        super().__init__(env, horizon, n_trajectories, pi, 'REINFORCE')
+        super().__init__(env, horizon, n_trajectories, pi, 'JREINFORCE')
 
 
 class JPQA(JAlgorithm):
     # Projected Q-Ascent using MC rollouts to estimate Q
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int):
         pi = JDirectPolicy.uniform(env.n_states, env.num_actions)
-        super().__init__(env, horizon, n_trajectories, pi, 'PQA')
+        super().__init__(env, horizon, n_trajectories, pi, 'JPQA')
         
 
     def lrk(self, lr: Callable | float, k: int, gradient: chex.Array):
@@ -241,7 +274,7 @@ class JEQA(JAlgorithm):
     # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int):
         pi = JSoftmaxPolicy.uniform(env.n_states, env.num_actions)
-        super().__init__(env, horizon, n_trajectories, pi, 'EQA')
+        super().__init__(env, horizon, n_trajectories, pi, 'JEQA')
 
 
     def lrk(self, lr: Callable | float, k: int, gradient: chex.Array):
@@ -324,7 +357,7 @@ class JDPMD(JAlgorithm):
         if dk == 0: # CONVERGED! V* = TV*
             return 0, 0
 
-        lrk = lr(k) * dk if callable(lr) else lr * dk / self.env.gamma**(2*(k + 1) * self.d) #TODO MAKE adaptive
+        lrk = lr(k) if callable(lr) else lr * dk / self.env.gamma**(2*(k + 1) * self.d) # TODO add adaptive flag
         if np.isinf(lrk) or np.isnan(lrk):
             lrk = np.inf
         return lrk, dk
@@ -335,11 +368,11 @@ class JDPMD(JAlgorithm):
     
     
     @partial(jax.jit, static_argnums=(0, 2))
-    def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams) -> chex.Array:
+    def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, pi: JPolicy) -> chex.Array:
         priors = jnp.zeros((self.horizon, env.num_actions))
 
         def value(value_key, obs, state):
-            _, _, rewards = self.sample_trajectory_from_state(value_key, env, params, obs, state, priors)
+            _, _, rewards = self.sample_trajectory_from_state(value_key, env, params, obs, state, priors, pi)
             rtg = self.reward_to_go(rewards)
             return rtg[0]
 
@@ -384,7 +417,7 @@ class JDPMD(JAlgorithm):
 class JDEQA(JDPMD):
     def __init__(self, env: JTabular, horizon: int = None, M_l: int = None, d: int = 1, M_t: int = None, M_f: int = None):
         pi = JSoftmaxPolicy.uniform(env.n_states, env.num_actions)
-        name = f'{d}-EQA'
+        name = f'{d}-JEQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
 
@@ -395,7 +428,7 @@ class JDEQA(JDPMD):
 class JDPQA(JDPMD):
     def __init__(self, env: JTabular, horizon: int, M_l: int = None, d: int = 1, M_t: int = None, M_f: int = None):
         pi = JDirectPolicy.uniform(env.n_states, env.num_actions)
-        name = f'{d}-PQA'
+        name = f'{d}-JPQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
 

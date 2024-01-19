@@ -150,13 +150,13 @@ class JDirectPolicy(JPolicy):
         if jnp.isinf(lr):
             probas = 1. * (grad == grad.max(axis=1)[..., jnp.newaxis])
             probas /= probas.sum(axis=1)[..., jnp.newaxis]
-            return JDirectPolicy(probas=probas)
+            return JDirectPolicy(params=probas)
         
         new = self.params + lr * grad
-        over_axis = jax.vmap(jax_simplex_project_sort, (0,))
+        over_axis = jax.vmap(jax_simplex_project_bijection, (0,))
         probas = over_axis(new - new.mean(axis=1)[..., jnp.newaxis])
 
-        return JDirectPolicy(probas=probas)
+        return JDirectPolicy(params=probas)
     
     @property
     def probas(self):

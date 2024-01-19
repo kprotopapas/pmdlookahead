@@ -44,15 +44,6 @@ def jax_simplex_project_bijection(v: jnp.ndarray):
     midpoint = (upper + lower) / 2.0
     value = func(midpoint)
 
-    for it in range(max_iter):
-        if abs(value) <= tau:
-            break
-
-        if value <= 0:
-            upper = midpoint
-        else:
-            lower = midpoint
-
     def cond(a: tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]):
         lower, midpoint, upper, value, it = a
         return (jnp.abs(value) > tau) & (it < max_iter)
@@ -70,7 +61,7 @@ def jax_simplex_project_bijection(v: jnp.ndarray):
     start = lower, midpoint, upper, value, 0
     lower, midpoint, upper, value, it = jax.lax.while_loop(cond, step, start)
 
-    return np.maximum(v - midpoint, 0)
+    return jnp.maximum(v - midpoint, 0)
 
 
 
