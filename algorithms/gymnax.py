@@ -100,7 +100,6 @@ class JAlgorithm(object):
 
             improvement = old - sub
             old = sub
-            V = self.env.V(self.pi)
             sub = jnp.dot(self.env.mu, V_opt - V)
 
             if verbose:
@@ -226,7 +225,7 @@ class JAlgorithm(object):
     
     @partial(jax.jit, static_argnums=(0, 2))
     def grad(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray):
-        return self.grad_exact(Q)
+        return self.grad_exact(key, env, params, Q)
     
     @partial(jax.jit, static_argnums=(0, 2))
     def grad_exact(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray):
@@ -337,8 +336,8 @@ class JDPMD(JAlgorithm):
 
 
     @partial(jax.jit, static_argnums=(0, 2))
-    def grad_exact(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray):
-        V = np.sum(self.pi.probas * Q, axis=1)
+    def grad_exact(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: jnp.ndarray, pi: JPolicy):
+        V = np.sum(pi.probas * Q, axis=1)
 
         body = lambda _, y: env.bellman(y)
         tdm = jax.lax.fori_loop(0, self.d - 1, body, V)

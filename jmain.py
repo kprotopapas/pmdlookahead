@@ -92,7 +92,7 @@ if __name__ == '__main__':
     H = size # fixed for deepsea because larger doesn't matter
     M_f = 1 # deterministic
     M_t = 1 # deterministic
-    M_l = 128 # otherwise way too big
+    M_l = 16 # otherwise way too big
 
     infos = []
     
