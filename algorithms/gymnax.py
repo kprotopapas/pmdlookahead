@@ -89,7 +89,7 @@ class JAlgorithm(object):
             metrics = {'suboptimality': sub, 'divergence': np.float32(dk), 'learning_rate': np.float32(lk), 'epoch': k}
             
             if not exact:
-                metrics['grad_error'] = float(jnp.max(jnp.abs(grad - grad_exact)))
+                metrics['grad_error'] = float(np.max(np.abs(grad - grad_exact)))
                 metrics['samples'] = int(self.samples)
 
             duration = time.time() - start
