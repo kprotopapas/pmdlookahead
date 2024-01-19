@@ -92,7 +92,7 @@ if __name__ == '__main__':
     H = size # fixed for deepsea because larger doesn't matter
     M_f = 1 # deterministic
     M_t = 1 # deterministic
-    M_l = 16 # otherwise way too big
+    M_l = 1 # Winnicki says this is good
 
     infos = []
     
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
     a = lr
     #lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
-    lr = lambda k: 0.1
+    #lr = lambda k: 0.1
     #ys = [lr(k) for k in range(epochs)]
 
     for _ in range(n_agents):
