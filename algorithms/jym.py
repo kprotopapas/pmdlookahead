@@ -113,11 +113,11 @@ class JAlgorithm(object):
     
     @partial(jax.jit, static_argnums=(0, 2))
     def sample_trajectory(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, pi: JPolicy):
-        env_key, action_key = jax.random.split(key)
-        obs, state = env.reset(env_key, params)
+        reset_key, trajectory_key = jax.random.split(key)
+        obs, state = env.reset(reset_key, params)
         priors = jnp.zeros((self.horizon, env.num_actions))
 
-        return self.sample_trajectory_from_state(action_key, env, params, obs, state, priors, pi)
+        return self.sample_trajectory_from_state(trajectory_key, env, params, obs, state, priors, pi)
     
     
     @partial(jax.jit, static_argnums=(0, 2))
@@ -126,20 +126,19 @@ class JAlgorithm(object):
         
         def step(a: tuple[chex.PRNGKey, chex.Array, EnvState, jnp.bool_], prior: chex.Array):
             key, obs, state, old_done = a
-            nkey, action_key = jax.random.split(key)
+            new_key, env_key, action_key = jax.random.split(key, 3)
             logits = pi.act(obs)
             action = jax.random.categorical(action_key, logits + prior)
-            nobs, nstate, reward, done, _ = env.step(nkey, state, action, params)
+            nobs, nstate, reward, done, _ = env.step(env_key, state, action, params)
             reward = jnp.where(old_done, 0, reward)
-            return (nkey, nobs, nstate, done | old_done), (obs, action, reward)
+            return (new_key, nobs, nstate, done | old_done), (nobs, action, reward)
 
 
         carry, ys = jax.lax.scan(step, (key, obs, state, jnp.bool_(False)), priors, length=self.horizon)
 
         nkey, nobs, nstate, done = carry
         observations, actions, rewards = ys
-        observations = jnp.vstack(([obs, observations]))
-
+        observations = jnp.vstack(([obs[jnp.newaxis, ...], observations]))
 
         return observations, actions, rewards # TODO for more advanced, flag "done" states as invalid...
     
