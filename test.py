@@ -1,34 +1,33 @@
 import timeit
 import numpy as np
 import time
-from algorithms.gymnax import *
+from algorithms.jym import *
 from algorithms.policies import *
 from jax import numpy as jnp
 import jax
+import gymnax
 
 from helper import *
 
-from environments.gymnax import JDeepsea
+from environments.jym import JDeepsea
+from environments.jym import DeepSea
 from environments.solvable import Deepsea
 
 size = 16
 gamma = 0.99
 
-env = JDeepsea(size, gamma)
-params = env.default_params
-alg = JDPQA(env, size, 16, 1, 1, 1)
+env, params = gymnax.make('DeepSea-bsuite', size=8)
+print(params)
+params = params.replace(deterministic=False)
 
-grad = jnp.zeros_like(alg.pi.probas)
-grad = grad.at[-2].set(jnp.array([0, 1]))
-alg.pi = alg.pi.update(grad, 1)
-print(alg.pi.probas[-2])
+env = DeepSea(size, gamma, deterministic=False)
+params = env.params
 
+alg = JEQA(env, 100, 1)
+embedding = jnp.ravel
+pi = JSoftmaxPolicy.uniform(env.num_states, env.num_actions, embedding=embedding)
 
 key = jax.random.PRNGKey(42)
-value_key, sample_key = jax.random.split(key)
+observations, actions, rewards = alg.sample_trajectory(key, env, params, alg.pi)
 
-V_est = alg.estimate_value(value_key, env, params)
-V = env.V(alg.pi)
-
-print(V_est[-2])
-print(V[-2])
+pass

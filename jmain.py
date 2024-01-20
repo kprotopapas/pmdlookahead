@@ -5,9 +5,9 @@ import time
 import pandas as pd
 from algorithms.tree import PGMCTS
 
-from environments.gymnax import JDeepsea
+from environments.jym import JDeepsea
 from environments.solvable import *
-from algorithms.gymnax import *
+from algorithms.jym import *
 from helper import random_simplex, parse_args
 
 def run(d=1):
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     delta = 0.01
     K = np.log(4 / ((1 - gamma) * epsilon)) / (1 - gamma)
     H = np.log(16 / (epsilon * np.power(1 - gamma, 3))) / (1 - gamma)
-    M_f = np.power(gamma, - 2 * H) * np.log(2 * K * env.n_states * env.num_actions / delta) / 2
+    M_f = np.power(gamma, - 2 * H) * np.log(2 * K * env.num_states * env.num_actions / delta) / 2
 
     K, H, M_f = int(np.ceil(K)), int(np.ceil(H)), int(np.ceil(M_f))
 

@@ -5,7 +5,7 @@ import time
 import pandas as pd
 from algorithms.tree import PGMCTS
 
-from environments.gymnax import JDeepsea
+from environments.jym import JDeepsea
 
 from environments.solvable import *
 from algorithms.baselines import *

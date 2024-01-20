@@ -8,7 +8,7 @@ import jax
 from gymnax.environments.environment import EnvState, Environment
 from functools import partial
 
-from environments.gymnax.tabular import JTabular
+from environments.jym.tabular import JTabular
 
 
 @struct.dataclass

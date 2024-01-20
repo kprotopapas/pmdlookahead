@@ -7,7 +7,7 @@ from functools import partial
 
 from gymnax.environments.environment import Environment
 
-from environments.gymnax.tabular import JTabular
+from environments.jym.tabular import JTabular
 
 @struct.dataclass
 class EnvState:

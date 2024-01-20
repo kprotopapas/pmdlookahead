@@ -8,11 +8,11 @@ from scipy.stats import entropy
 
 from jax import numpy as jnp
 from mctx._src.base import PolicyOutput
-from algorithms.gymnax import JAlgorithm
+from algorithms.jym import JAlgorithm
 from algorithms.policies import JPolicy
 
-from environments.gymnax import *
-from environments.gymnax.tabular import JTabular
+from environments.jym import *
+from environments.jym.tabular import JTabular
 from environments.solvable import *
 from planning.jmcts import run_mcts
 

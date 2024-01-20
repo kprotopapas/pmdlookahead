@@ -13,7 +13,7 @@ import os
 from scipy.stats import entropy
 from gymnax.environments.environment import Environment
 from algorithms.policies import JDirectPolicy, JPolicy, JSoftmaxPolicy
-from environments.gymnax.tabular import JTabular
+from environments.jym import JTabular
 
 logging.basicConfig(level=logging.INFO)
 
@@ -51,16 +51,8 @@ class JAlgorithm(object):
         
             run = wandb.init(project="rl_experiments", config=config, group=group, entity='kprotopapas')
 
-        backup = f'{env.display_name}-{env.size}-{env.gamma}.npy'
-        if backup in os.listdir('backups'):
-            optimal = jnp.load(f'backups/{backup}', allow_pickle=True)
-        else:
-            optimal = env.optimal()
         
-        V_opt = optimal.max(axis=1)
-        V = env.V(self.pi)
-        old = jnp.dot(self.env.mu, V_opt - V)
-
+        old = 0
 
         for k in range(epochs):
             key = jax.random.PRNGKey(seed * k)
@@ -68,13 +60,12 @@ class JAlgorithm(object):
             
             Q = self.env.Q(self.pi)
             
-            value_key, grad_key = jax.random.split(key, 2)
-            grad_exact = self.grad_exact(key, env, params, Q, self.pi)
+            eval_key, value_key, grad_key = jax.random.split(key, 3)
             Q_est, value_samples = self.estimate_value(value_key, env, params, self.pi)
             grad, grad_samples = self.grad(grad_key, env, params, Q_est, self.pi)
             self.samples += value_samples + grad_samples
 
-            gradient = jnp.where(exact, grad_exact, grad)
+            gradient = grad
 
             lk, dk = self.lrk(lr, k, gradient)
             new_pi = self.pi.update(gradient, lk)
@@ -85,21 +76,21 @@ class JAlgorithm(object):
 
             V = jnp.sum(self.pi.probas * Q, axis=1)
             
-            sub = float(jnp.dot(self.env.mu, V_opt - V))
-            metrics = {'suboptimality': sub, 'divergence': np.float32(dk), 'learning_rate': np.float32(lk), 'epoch': k}
+            reward = self.evaluate(eval_key, env, params, 128)
+            metrics = {'avg_reward': reward, 'divergence': np.float32(dk), 'learning_rate': np.float32(lk), 'epoch': k}
             
             if not exact:
-                metrics['grad_error'] = float(np.max(np.abs(grad - grad_exact)))
+                #metrics['grad_error'] = float(np.max(np.abs(grad - grad_exact)))
                 metrics['samples'] = int(self.samples)
 
             duration = time.time() - start
             info.append(metrics)
 
-            improvement = old - sub
-            old = sub
+            improvement = old - reward
+            old = reward
 
             if verbose:
-                logging.info(f'Epoch: {k}, suboptimality: {sub:06f}, in time: {duration:06f}, improvement: {improvement:06f}')
+                logging.info(f'Epoch: {k}, suboptimality: {reward:06f}, in time: {duration:06f}, improvement: {improvement:06f}')
 
             if use_wandb:
                 wandb.log(metrics)
@@ -188,7 +179,7 @@ class JAlgorithm(object):
         over_both = jax.vmap(over_priors, (None, 0, 0, None))
         over_keys = jax.vmap(over_both, (0, None, None, None))
         
-        state_nums = jnp.arange(env.n_states)
+        state_nums = jnp.arange(env.num_states)
         inverse = lambda s: env.inverse(s)
         obs_batch, state_batch = jax.vmap(inverse, (0,))(state_nums)
 
@@ -200,7 +191,7 @@ class JAlgorithm(object):
 
         Q_all = over_keys(keys, obs_batch, state_batch, priors_batch)
 
-        return jnp.mean(Q_all, axis=0), self.n_trajectories * env.n_states * env.num_actions * self.horizon
+        return jnp.mean(Q_all, axis=0), self.n_trajectories * env.num_states * env.num_actions * self.horizon
     
 
     @partial(jax.jit, static_argnums=(0, 2, 4))
@@ -246,7 +237,7 @@ class JREINFORCE(JAlgorithm):
 class JPQA(JAlgorithm):
     # Projected Q-Ascent using MC rollouts to estimate Q
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int):
-        pi = JDirectPolicy.uniform(env.n_states, env.num_actions)
+        pi = JDirectPolicy.uniform(env.num_states, env.num_actions)
         super().__init__(env, horizon, n_trajectories, pi, 'JPQA')
         
 
@@ -268,7 +259,7 @@ class JPQA(JAlgorithm):
 class JEQA(JAlgorithm):
     # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int):
-        pi = JSoftmaxPolicy.uniform(env.n_states, env.num_actions)
+        pi = JSoftmaxPolicy.uniform(env.num_states, env.num_actions)
         super().__init__(env, horizon, n_trajectories, pi, 'JEQA')
 
 
@@ -315,7 +306,7 @@ class JDPMD(JAlgorithm):
             nind = env.index(nobs)
             return reward + self.env.gamma * tdm[nind]
         
-        state_nums = jnp.arange(env.n_states)
+        state_nums = jnp.arange(env.num_states)
         inverse = lambda s: env.inverse(s)
         obs_batch, state_batch = jax.vmap(inverse, (0,))(state_nums)
         action_batch = jnp.arange(env.num_actions)
@@ -327,7 +318,7 @@ class JDPMD(JAlgorithm):
 
         Q = over_keys(keys, state_batch, action_batch).mean(axis=0)
 
-        return Q, env.n_states * env.num_actions * self.M_f + env.n_states * env.num_actions * self.M_t * self.d - 1
+        return Q, env.num_states * env.num_actions * self.M_f + env.num_states * env.num_actions * self.M_t * self.d - 1
 
 
 
@@ -374,20 +365,20 @@ class JDPMD(JAlgorithm):
         over_states = jax.vmap(value, (None, 0, 0))
         over_keys = jax.vmap(over_states, (0, None, None))
         
-        state_nums = jnp.arange(env.n_states)
+        state_nums = jnp.arange(env.num_states)
         inverse = lambda s: env.inverse(s)
         obs_batch, state_batch = jax.vmap(inverse, (0,))(state_nums)
 
         keys = jax.random.split(key, self.n_trajectories)
         V_all = over_keys(keys, obs_batch, state_batch)
 
-        return jnp.mean(V_all, axis=0), env.n_states * self.n_trajectories * self.horizon
+        return jnp.mean(V_all, axis=0), env.num_states * self.n_trajectories * self.horizon
 
     
 
     @partial(jax.jit, static_argnums=(0, 2))
     def approx_bellman(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, V: jnp.ndarray):
-        state_nums = jnp.arange(env.n_states)
+        state_nums = jnp.arange(env.num_states)
 
         def value(key, state, action):
             nobs, nstate, reward, done, _ = env.step(key, state, action, params)
@@ -411,7 +402,7 @@ class JDPMD(JAlgorithm):
 
 class JDEQA(JDPMD):
     def __init__(self, env: JTabular, horizon: int = None, M_l: int = None, d: int = 1, M_t: int = None, M_f: int = None):
-        pi = JSoftmaxPolicy.uniform(env.n_states, env.num_actions)
+        pi = JSoftmaxPolicy.uniform(env.num_states, env.num_actions)
         name = f'{d}-JEQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
@@ -422,7 +413,7 @@ class JDEQA(JDPMD):
 
 class JDPQA(JDPMD):
     def __init__(self, env: JTabular, horizon: int, M_l: int = None, d: int = 1, M_t: int = None, M_f: int = None):
-        pi = JDirectPolicy.uniform(env.n_states, env.num_actions)
+        pi = JDirectPolicy.uniform(env.num_states, env.num_actions)
         name = f'{d}-JPQA'
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
