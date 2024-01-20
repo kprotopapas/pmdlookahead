@@ -58,7 +58,7 @@ class JAlgorithm(object):
             key = jax.random.PRNGKey(seed * k)
             start = time.time()
             
-            Q = self.env.Q(self.pi)
+            #Q = self.env.Q(self.pi)
             
             eval_key, value_key, grad_key = jax.random.split(key, 3)
             Q_est, value_samples = self.estimate_value(value_key, env, params, self.pi)
@@ -74,9 +74,9 @@ class JAlgorithm(object):
             self.pi = new_pi
 
 
-            V = jnp.sum(self.pi.probas * Q, axis=1)
+            #V = jnp.sum(self.pi.probas * Q, axis=1)
             
-            reward = self.evaluate(eval_key, env, params, 128)
+            reward = self.evaluate(eval_key, env, params, 128, self.pi)
             metrics = {'avg_reward': reward, 'divergence': np.float32(dk), 'learning_rate': np.float32(lk), 'epoch': k}
             
             if not exact:
@@ -86,11 +86,11 @@ class JAlgorithm(object):
             duration = time.time() - start
             info.append(metrics)
 
-            improvement = old - reward
+            improvement = reward - old
             old = reward
 
             if verbose:
-                logging.info(f'Epoch: {k}, suboptimality: {reward:06f}, in time: {duration:06f}, improvement: {improvement:06f}')
+                logging.info(f'Epoch: {k}, reward: {reward:06f}, in time: {duration:06f}, improvement: {improvement:06f}')
 
             if use_wandb:
                 wandb.log(metrics)
@@ -194,11 +194,11 @@ class JAlgorithm(object):
     
 
     @partial(jax.jit, static_argnums=(0, 2, 4))
-    def evaluate(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, rollouts: int) -> float:
+    def evaluate(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, rollouts: int, pi: JPolicy) -> float:
         keys = jax.random.split(key, rollouts)
 
         def value(key, env, params):
-            _, _, rewards = self.sample_trajectory(key, env, params)
+            _, _, rewards = self.sample_trajectory(key, env, params, pi)
             r = self.reward_to_go(rewards)[0]
             return r
         

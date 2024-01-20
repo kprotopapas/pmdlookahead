@@ -5,7 +5,7 @@ import time
 import pandas as pd
 from algorithms.tree import PGMCTS
 
-from environments.jym import JDeepsea
+from environments.jym import DeepSea
 from environments.solvable import *
 from algorithms.jym import *
 from helper import random_simplex, parse_args
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     
     #env = JTabular(P, R, mu, gamma, 'Stochastic')
     #env = Trap(size, gamma)
-    env = JDeepsea(size, gamma)
+    env = DeepSea(size, gamma, deterministic=False)
 
     # Formula from (Johnson 2023)
     epsilon = 1e-4

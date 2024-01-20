@@ -48,6 +48,11 @@ class DeepSea(JTabular):
     
     @partial(jax.jit, static_argnums=(0,))
     def index(self, obs: chex.Array) -> int:
-        not_terminal = jnp.any(obs > 0)
-        row, col = jnp.argwhere(obs == 1)
-        return jnp.select(not_terminal, row * self.size + col, self.size**2)
+        row, col = jnp.argwhere(obs == 1, size=1, fill_value=self.size)[0]
+        not_terminal = row < self.size
+        return jax.lax.select(not_terminal, row * self.size + col, self.size**2)
+    
+
+    @property
+    def default_params(self):
+        return self.params
