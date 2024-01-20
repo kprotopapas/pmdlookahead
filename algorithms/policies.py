@@ -144,7 +144,7 @@ class JDirectPolicy(JPolicy):
     params: chex.Array
 
     def act(self, obs: chex.Array) -> chex.Array:
-        return jnp.log(jnp.matmul(self.params.T, obs))
+        return jnp.log(jnp.matmul(self.params.T, jnp.ravel(obs)))
     
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
         if jnp.isinf(lr):
@@ -173,11 +173,9 @@ class JDirectPolicy(JPolicy):
 @chex.dataclass(kw_only=True)
 class JSoftmaxPolicy(JPolicy): # softmax policy
     logits: chex.Array
-    embedding: callable = lambda x: x
 
     def act(self, obs: chex.Array) -> chex.Array: # needs one-hot encoded states
-        obs = self.embedding(obs)
-        return jnp.matmul(self.logits.T, obs)
+        return jnp.matmul(self.logits.T, jnp.ravel(obs))
 
 
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
@@ -202,8 +200,8 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
 
 
     @staticmethod
-    def uniform(n_states: int, n_actions: int, embedding = lambda x: x) -> JSoftmaxPolicy:
-        return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)), embedding=embedding)
+    def uniform(n_states: int, n_actions: int) -> JSoftmaxPolicy:
+        return JSoftmaxPolicy(logits=jnp.zeros((n_states, n_actions)))
 
 
 @chex.dataclass(kw_only=True)

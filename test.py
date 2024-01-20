@@ -13,21 +13,20 @@ from environments.jym import JDeepsea
 from environments.jym import DeepSea
 from environments.solvable import Deepsea
 
-size = 16
+size = 8
 gamma = 0.99
-
-env, params = gymnax.make('DeepSea-bsuite', size=8)
-print(params)
-params = params.replace(deterministic=False)
 
 env = DeepSea(size, gamma, deterministic=False)
 params = env.params
 
 alg = JEQA(env, 100, 1)
-embedding = jnp.ravel
-pi = JSoftmaxPolicy.uniform(env.num_states, env.num_actions, embedding=embedding)
+pi = JSoftmaxPolicy.uniform(env.num_states, env.num_actions)
 
 key = jax.random.PRNGKey(42)
-observations, actions, rewards = alg.sample_trajectory(key, env, params, alg.pi)
 
-pass
+obs, state = env.reset(key, params)
+priors = jnp.zeros((100, 2)).at[:, 0].set(-jnp.inf)
+observations, actions, rewards = alg.sample_trajectory_from_state(key, env, params, obs, state, priors, alg.pi)
+for obs in observations:
+    print(obs)
+    input()
