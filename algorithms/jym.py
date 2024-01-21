@@ -51,21 +51,32 @@ class JAlgorithm(object):
         
             run = wandb.init(project="rl_experiments", config=config, group=group, entity='kprotopapas')
 
+        filename = f'{env.name}-{env.size}-{env.gamma}.npy'
+        print(filename)
+        print(os.listdir('backups'))
+        print(filename in os.listdir('backups'))
+        if filename not in os.listdir('backups'):
+            V_opt = env.optimal().max(axis=1)
+        else:
+            V_opt = np.load(f'backups/{filename}', allow_pickle=True)
         
+
         old = 0
 
         for k in range(epochs):
             key = jax.random.PRNGKey(seed * k)
             start = time.time()
-            
-            #Q = self.env.Q(self.pi)
-            
-            eval_key, value_key, grad_key = jax.random.split(key, 3)
+
+            grad_key, value_key, grad_est_key = jax.random.split(key, 3)
+            Q = self.env.Q(self.pi)
+            grad_exact = self.grad_exact(grad_key, env, params, Q, self.pi)
+
             Q_est, value_samples = self.estimate_value(value_key, env, params, self.pi)
-            grad, grad_samples = self.grad(grad_key, env, params, Q_est, self.pi)
+            grad_est, grad_samples = self.grad(grad_est_key, env, params, Q_est, self.pi)
+
             self.samples += value_samples + grad_samples
 
-            gradient = grad
+            gradient = jax.lax.select(exact, grad_exact, grad_est)
 
             lk, dk = self.lrk(lr, k, gradient)
             new_pi = self.pi.update(gradient, lk)
@@ -73,21 +84,23 @@ class JAlgorithm(object):
                 pass
             self.pi = new_pi
             
-            reward = self.evaluate(key, env, params, 128, self.pi)
-            metrics = {'avg_reward': reward, 'divergence': np.float32(dk), 'learning_rate': np.float32(lk), 'epoch': k}
+            V = jnp.sum(self.pi.probas * Q, axis=1)
+            sub = jnp.dot(env.mu, V_opt - V)
+            metrics = {'suboptimality': sub, 'divergence': np.float32(dk), 'learning_rate': np.float32(lk), 'epoch': k}
             
             if not exact:
-                #metrics['grad_error'] = float(np.max(np.abs(grad - grad_exact)))
+                full_grad = jnp.vstack((grad_est, jnp.zeros_like(grad_est[0])))
+                metrics['grad_error'] = float(np.max(np.abs(full_grad - grad_exact)))
                 metrics['samples'] = int(self.samples)
 
             duration = time.time() - start
             info.append(metrics)
 
-            improvement = reward - old
-            old = reward
+            improvement = old - sub
+            old = sub
 
             if verbose:
-                logging.info(f'Epoch: {k}, reward: {reward:06f}, in time: {duration:06f}, improvement: {improvement:06f}')
+                logging.info(f'Epoch: {k}, suboptimality: {sub:06f}, in time: {duration:06f}, improvement: {improvement:06f}')
 
             if use_wandb:
                 wandb.log(metrics)

@@ -159,8 +159,8 @@ class JDirectPolicy(JPolicy):
         return JDirectPolicy(params=probas)
     
     @property
-    def probas(self):
-        return self.params
+    def probas(self): # TODO for compatibility with gymnax assume there is extra absorbing state for termination
+        return jnp.vstack([self.params, jnp.ones_like(self.params[0]) / 2])
     
 
     @staticmethod
@@ -192,8 +192,8 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
 
     @property
     def probas(self):
-        return jnp.exp(self.logits) / jnp.sum(jnp.exp(self.logits), axis=1)[..., jnp.newaxis]
-
+        probas = jnp.exp(self.logits) / jnp.sum(jnp.exp(self.logits), axis=1)[..., jnp.newaxis]
+        return jnp.vstack([probas, jnp.ones_like(probas[0]) / 2])
 
     def numpy(self):
         return SoftmaxPolicy(self.logits.shape[0], self.logits.shape[1])

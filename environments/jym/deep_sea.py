@@ -9,7 +9,7 @@ from gymnax.environments.bsuite.deep_sea import EnvParams, EnvState
 from environments.jym import JTabular
 
 
-# Wrapper for the DeepSea environment with ability to set state
+# Wrapper for the DeepSea environment with explicit P, R, µ matrices and without state resets at the end of episode
 class DeepSea(JTabular):
     def __init__(self, size: int, gamma: float, deterministic: bool = True):
         env, params = gymnax.make('DeepSea-bsuite', size=size)
@@ -41,9 +41,9 @@ class DeepSea(JTabular):
         over_both = jax.vmap(over_states, (None, 0), 2)
         P = over_both(states, actions)
 
-        penalty = -0.01
-        R = jnp.zeros((size**2 + 1, 2)).at[:, 1].set(penalty / size)
-        R = R.at[size**2 - 1, 1].set(1)
+        penalty = -0.01 / size
+        R = jnp.zeros((size**2 + 1, 2)).at[:, 1].set(penalty)
+        R = R.at[size**2 - 1, 1].set(1 + penalty)
         R = R.at[size**2, :].set(0)
         mu = jnp.zeros((size**2 + 1, )).at[0].set(1)
 
