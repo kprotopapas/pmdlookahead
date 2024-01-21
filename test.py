@@ -13,20 +13,21 @@ from environments.jym import JDeepsea
 from environments.jym import DeepSea
 from environments.solvable import Deepsea
 
-size = 8
+size = 64
 gamma = 0.99
 
 env = DeepSea(size, gamma, deterministic=False)
 params = env.params
 
-alg = JEQA(env, 100, 1)
-pi = JSoftmaxPolicy.uniform(env.num_states, env.num_actions)
-
+alg = JDEQA(env, size, d=20, M_l=1, M_t=1, M_f=1)
 key = jax.random.PRNGKey(42)
 
-obs, state = env.reset(key, params)
-priors = jnp.zeros((100, 2)).at[:, 0].set(-jnp.inf)
-observations, actions, rewards = alg.sample_trajectory_from_state(key, env, params, obs, state, priors, alg.pi)
-for obs in observations:
-    print(obs)
-    input()
+r = alg.evaluate(key, env, params, 128, alg.pi)
+print(r)
+
+
+key = jax.random.PRNGKey(43)
+
+duration = timeit.timeit(lambda: alg.evaluate(key, env, params, 128, alg.pi), number=100)
+
+print(f'After JIT compilation, takes {duration / 100} seconds')

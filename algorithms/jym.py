@@ -72,11 +72,8 @@ class JAlgorithm(object):
             if jnp.any(jnp.isnan(new_pi.probas)):
                 pass
             self.pi = new_pi
-
-
-            #V = jnp.sum(self.pi.probas * Q, axis=1)
             
-            reward = self.evaluate(eval_key, env, params, 128, self.pi)
+            reward = self.evaluate(key, env, params, 128, self.pi)
             metrics = {'avg_reward': reward, 'divergence': np.float32(dk), 'learning_rate': np.float32(lk), 'epoch': k}
             
             if not exact:
