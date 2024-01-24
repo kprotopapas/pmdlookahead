@@ -25,26 +25,26 @@ class JDeepsea(JTabular):
         self.penalty = -0.1 * gamma**size / size
         self.size = size
         self.goal = jnp.array([self.size, 0], dtype=jnp.int32)
-
+        n_states = size * (size + 1) // 2 + 1
 
         def step(s, a):
             _, state = self.inverse(s)
             nstate = self.transition(state, a)
             sp = self.index(nstate)
-            return jnp.zeros((size**2 + 1)).at[sp].set(1)
+            return jnp.zeros((n_states)).at[sp].set(1)
 
 
-        states = jnp.arange(size**2 + 1)
+        states = jnp.arange(n_states)
         actions = jnp.arange(2)
 
         over_states = jax.vmap(step, (0, None), 1)
         over_both = jax.vmap(over_states, (None, 0), 2)
         P = over_both(states, actions)
 
-        R = jnp.zeros((size**2 + 1, 2)).at[:, 1].set(self.penalty)
-        R = R.at[size**2 - 1, 1].set(1)
-        R = R.at[size**2, :].set(0)
-        mu = jnp.zeros((size**2 + 1, )).at[0].set(1)
+        R = jnp.zeros((n_states, 2)).at[:, 1].set(self.penalty)
+        R = R.at[n_states - 2, 1].set(1)
+        R = R.at[n_states - 1, :].set(0)
+        mu = jnp.zeros((n_states, )).at[0].set(1)
 
         super().__init__(P, R, mu, gamma, f'Deepsea')
 
@@ -93,8 +93,9 @@ class JDeepsea(JTabular):
 
     @partial(jax.jit, static_argnums=(0,))
     def get_obs(self, state: EnvState) -> Array:
-        ind = jnp.sum(jnp.array([self.size, 1]) * state.pos).astype(jnp.int32)
-        return jnp.zeros((self.size**2 + 1, )).at[ind].set(1)
+        temp = jnp.zeros((self.size, self.size))
+        row, column = state.pos
+        return temp.at[row, column].set(1)
 
     
     @property

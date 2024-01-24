@@ -13,33 +13,37 @@ from environments.jym import JDeepsea
 from environments.jym import DeepSea
 from environments.solvable import Deepsea
 
-size = 4
+size = 2
 gamma = 0.99
 
-env = DeepSea(size, gamma, deterministic=False)
-opt = env.optimal()
+new_env = DeepSea(size, gamma, deterministic=False)
+opt = new_env.optimal()
 
 jenv = JDeepsea(size, gamma)
 opt_mine = jenv.optimal()
 
-
-P = env.P
-JP = jenv.P
-
-
-""""
-params = env.params
-
-alg = JDEQA(env, size, d=20, M_l=1, M_t=1, M_f=1)
-key = jax.random.PRNGKey(42)
-
-r = alg.evaluate(key, env, params, 128, alg.pi)
-print(r)
+V_opt = opt_mine.max(axis=1)
+reshaped = np.zeros((size, size))
+for i in range(size * (size + 1) // 2):
+    obs, state = new_env.inverse(i)
+    row = state.row
+    col = state.column
+    reshaped[row, col] = V_opt[i]
 
 
-key = jax.random.PRNGKey(43)
 
-duration = timeit.timeit(lambda: alg.evaluate(key, env, params, 128, alg.pi), number=100)
+indices = np.tril(np.arange(size * size).reshape((size, size))).flatten()
+indices = np.hstack((np.array([0]), indices[np.nonzero(indices)], np.array([size**2])))
 
-print(f'After JIT compilation, takes {duration / 100} seconds')
-"""
+real_env = Deepsea(size, gamma)
+real_opt = real_env.optimal()
+real_opt = real_opt[indices]
+
+
+P_real = real_env.P[indices, :, :][:, indices, :]
+P_new = new_env.P
+P_old = jenv.P
+
+print(P_new - P_real)
+print(P_old - P_real)
+pass

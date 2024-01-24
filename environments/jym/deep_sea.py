@@ -34,9 +34,10 @@ class DeepSea(JTabular):
             ncol_det = jax.lax.select(row >= self.size - 1, 0, jnp.clip(col + dx, 0, self.size - 1))
             ncol_swp = jax.lax.select(row >= self.size - 1, 0, jnp.clip(col - dx, 0, self.size - 1))
 
-            sp_det = nrow + ncol_det
+            ntri = nrow * (nrow + 1) // 2
+            sp_det = ntri + ncol_det
             
-            sp_swp = nrow + ncol_swp
+            sp_swp = ntri + ncol_swp
             
             base = jnp.zeros((num_states, ), dtype=jnp.float32)
             sp_oh_det = base.at[sp_det].set(1)
