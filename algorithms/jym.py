@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO)
 class JAlgorithm(object):
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int, pi: JPolicy, name: str):
         self.config = {'algorithm': name,
-                       'environment': {'name': env.name, 'gamma': env.gamma},
+                       'environment': {'name': env.display_name, 'gamma': env.gamma},
                        'horizon': horizon,
                        'trajectories': n_trajectories}
         self.horizon = horizon
