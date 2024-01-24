@@ -73,7 +73,7 @@ if __name__ == '__main__':
     
     #env = JTabular(P, R, mu, gamma, 'Stochastic')
     #env = Trap(size, gamma)
-    env = DeepSea(size, gamma, deterministic=False)
+    env = DeepSea(size, gamma, deterministic=True)
 
     # Formula from (Johnson 2023)
     epsilon = 1e-4

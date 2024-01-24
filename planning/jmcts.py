@@ -9,11 +9,12 @@ from functools import partial as par
 from algorithms.policies import JPolicy
 
 from gymnax.environments.environment import EnvState, EnvParams, Environment
+from environments.jym.tabular import JTabular
 from environments.solvable import *
 from algorithms.policies import *
 
 
-def rollout(env: Environment, params: EnvParams, gamma: float,
+def rollout(env: JTabular, params: EnvParams, gamma: float,
             obs: chex.Array, state: EnvState, rng_key: chex.PRNGKey, pi: JPolicy
             ) -> float:
     def cond(a: tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_, int]) -> jnp.bool_:
@@ -23,8 +24,9 @@ def rollout(env: Environment, params: EnvParams, gamma: float,
     def step(a: tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_, int]
              ) -> tuple[float, chex.Array, EnvState, chex.PRNGKey, jnp.bool_, int]:
         cumulative, obs, state, key, done, t = a
+        ind = env.index(state)
         key, subkey = jax.random.split(key)
-        action = jax.random.categorical(subkey, pi.act(obs))
+        action = jax.random.categorical(subkey, pi.act(ind))
         new_obs, new_state, reward, done, _ = env.step(subkey, state, action, params)
         cumulative += reward * gamma**t
         return cumulative, obs, new_state, key, done, t + 1

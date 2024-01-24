@@ -52,16 +52,18 @@ class JAlgorithm(object):
             run = wandb.init(project="rl_experiments", config=config, group=group, entity='kprotopapas')
 
         filename = f'{env.name}-{env.size}-{env.gamma}.npy'
-        print(filename)
-        print(os.listdir('backups'))
-        print(filename in os.listdir('backups'))
-        if filename not in os.listdir('backups'):
-            V_opt = env.optimal().max(axis=1)
-        else:
-            V_opt = np.load(f'backups/{filename}', allow_pickle=True)
         
+        if filename not in os.listdir('backups'):
+            Q_opt = env.optimal()
+            np.save(f'backups/{filename}', Q_opt, allow_pickle=True)
 
-        old = 0
+        else:
+            Q_opt = np.load(f'backups/{filename}', allow_pickle=True)
+
+        V_opt = Q_opt.max(axis=1)
+        Q = self.env.Q(self.pi)
+        V = jnp.sum(self.pi.probas * Q, axis=1)
+        old = jnp.dot(env.mu, V_opt - V)
 
         for k in range(epochs):
             key = jax.random.PRNGKey(seed * k)
@@ -86,11 +88,10 @@ class JAlgorithm(object):
             
             V = jnp.sum(self.pi.probas * Q, axis=1)
             sub = jnp.dot(env.mu, V_opt - V)
-            metrics = {'suboptimality': sub, 'divergence': np.float32(dk), 'learning_rate': np.float32(lk), 'epoch': k}
+            metrics = {'suboptimality': np.float32(sub), 'divergence': np.float32(dk), 'learning_rate': np.float32(lk), 'epoch': k}
             
             if not exact:
-                full_grad = jnp.vstack((grad_est, jnp.zeros_like(grad_est[0])))
-                metrics['grad_error'] = float(np.max(np.abs(full_grad - grad_exact)))
+                metrics['grad_error'] = float(np.max(np.abs(grad_est - grad_exact)))
                 metrics['samples'] = int(self.samples)
 
             duration = time.time() - start
@@ -137,7 +138,8 @@ class JAlgorithm(object):
         def step(a: tuple[chex.PRNGKey, chex.Array, EnvState, jnp.bool_], prior: chex.Array):
             key, obs, state, old_done = a
             new_key, env_key, action_key = jax.random.split(key, 3)
-            logits = pi.act(obs)
+            ind = env.index(state)
+            logits = pi.act(ind)
             action = jax.random.categorical(action_key, logits + prior)
             nobs, nstate, reward, done, _ = env.step(env_key, state, action, params)
             reward = jnp.where(old_done, 0, reward)
@@ -312,7 +314,7 @@ class JDPMD(JAlgorithm):
 
         def value(key, state, action):
             nobs, nstate, reward, done, _ = env.step(key, state, action, params)
-            nind = env.index(nobs)
+            nind = env.index(nstate)
             return reward + self.env.gamma * tdm[nind]
         
         state_nums = jnp.arange(env.num_states)
@@ -391,7 +393,7 @@ class JDPMD(JAlgorithm):
 
         def value(key, state, action):
             nobs, nstate, reward, done, _ = env.step(key, state, action, params)
-            nind = env.index(nobs)
+            nind = env.index(nstate)
             return reward + self.env.gamma * V[nind]
         
         inverse = lambda s: env.inverse(s)

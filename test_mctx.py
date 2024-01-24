@@ -20,7 +20,7 @@ N = 50
 M_l = 128
 
 
-size = 16
+size = 64
 depth = 8
 gamma = 0.99
 key = jax.random.PRNGKey(42)

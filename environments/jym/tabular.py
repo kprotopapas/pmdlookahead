@@ -29,6 +29,7 @@ class JTabular(Environment):
         self.mu = mu
         self.gamma = gamma
         self.display_name = name
+        self.num_obs = None
 
 
     @property
@@ -40,7 +41,7 @@ class JTabular(Environment):
         raise NotImplementedError
     
     @partial(jax.jit, static_argnums=(0,))
-    def index(self, obs: chex.Array) -> int:
+    def index(self, state: EnvState) -> int:
         raise NotImplementedError
     
     @property

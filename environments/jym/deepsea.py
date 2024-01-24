@@ -30,8 +30,7 @@ class JDeepsea(JTabular):
         def step(s, a):
             _, state = self.inverse(s)
             nstate = self.transition(state, a)
-            nobs = self.get_obs(nstate)
-            sp = self.index(nobs)
+            sp = self.index(nstate)
             return jnp.zeros((size**2 + 1)).at[sp].set(1)
 
 
@@ -103,13 +102,18 @@ class JDeepsea(JTabular):
         return jnp.array([self.size, 1])
 
     @partial(jax.jit, static_argnums=(0,))
-    def index(self, obs: chex.Array) -> int:
-        return jnp.where(jnp.any(obs > 0), jnp.argmax(obs), self.size**2)
+    def index(self, state: EnvState) -> int:
+        row, col = state.pos
+        tri = row * (row + 1) // 2
+        col = jax.lax.select(row >= self.size, 0, col)
+        return tri + col
+
     
     @partial(jax.jit, static_argnums=(0,))
-    def inverse(self, state_index: int) -> tuple[chex.Array, EnvState]:
-        row = state_index // self.size
-        col = state_index % self.size
+    def inverse(self, state_ind: int) -> tuple[chex.Array, EnvState]:
+        row = jnp.floor((jnp.sqrt(8 * state_ind + 1) - 1) / 2).astype(jnp.int32) # returns closest triangle root
+        tri = row * (row + 1) // 2
+        col = jax.lax.select(row >= self.size, 0, state_ind - tri)
 
         pos = jnp.array([row, col])
         state = EnvState(pos)

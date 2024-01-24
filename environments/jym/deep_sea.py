@@ -17,24 +17,35 @@ class DeepSea(JTabular):
         self.size = size
         self.env = env
         self.params = params
+        self.n_obs = self.size**2
 
         prb_swp = 1 / self.size
+        num_states = self.size * (self.size + 1) // 2 + 1
 
         def step(s, a):
             # nondeterministic transition: left -> left, right -> 1 / size * left + (1 - 1 / size) * right
+            row = jnp.floor((jnp.sqrt(8 * s + 1) - 1) / 2).astype(jnp.int32) # returns closest triangle root
+            tri = row * (row + 1) // 2
+            col = s - tri
+
+            nrow = jnp.minimum(row + 1, self.size).astype(jnp.int32)
+
             dx = 2 * a - 1
-            row, col = s // 64, s % 64
-            sp_det = (row + 1) * 64 + jnp.clip(col + dx, 0, self.size - 1)
-            sp_swp = (row + 1) * 64 + jnp.clip(col - dx, 0, self.size - 1) 
+            ncol_det = jax.lax.select(row >= self.size - 1, 0, jnp.clip(col + dx, 0, self.size - 1))
+            ncol_swp = jax.lax.select(row >= self.size - 1, 0, jnp.clip(col - dx, 0, self.size - 1))
+
+            sp_det = nrow + ncol_det
             
-            base = jnp.zeros((size**2 + 1, ), dtype=jnp.float32)
+            sp_swp = nrow + ncol_swp
+            
+            base = jnp.zeros((num_states, ), dtype=jnp.float32)
             sp_oh_det = base.at[sp_det].set(1)
             sp_oh_swp = base.at[sp_det].add(1 - prb_swp).at[sp_swp].add(prb_swp)
 
             return jax.lax.select(deterministic, sp_oh_det, sp_oh_swp)
         
 
-        states = jnp.arange(size**2 + 1)
+        states = jnp.arange(num_states)
         actions = jnp.arange(2)
 
         over_states = jax.vmap(step, (0, None), 1)
@@ -42,13 +53,14 @@ class DeepSea(JTabular):
         P = over_both(states, actions)
 
         penalty = -0.01 / size
-        R = jnp.zeros((size**2 + 1, 2)).at[:, 1].set(penalty)
-        R = R.at[size**2 - 1, 1].set(1 + penalty)
-        R = R.at[size**2, :].set(0)
-        mu = jnp.zeros((size**2 + 1, )).at[0].set(1)
-
+        R = jnp.zeros((num_states, 2)).at[:, 1].set(penalty)
         
-        super().__init__(P, R, mu, gamma, 'DeepSea-Wrapper')
+        R = R.at[num_states - 2, 1].set(1 + penalty)
+        R = R.at[num_states - 1, :].set(0)
+        mu = jnp.zeros((num_states, )).at[0].set(1)
+
+        name = 'DeepSea-Wrapper' + (f'-rand' if not deterministic else '')
+        super().__init__(P, R, mu, gamma, name)
 
 
     @partial(jax.jit, static_argnums=(0, ))
@@ -67,8 +79,9 @@ class DeepSea(JTabular):
     
     @partial(jax.jit, static_argnums=(0,))
     def inverse(self, state_ind: int) -> tuple[chex.Array, EnvState]:
-        row = state_ind // self.size
-        col = state_ind % self.size
+        row = jnp.floor((jnp.sqrt(8 * state_ind + 1) - 1) / 2).astype(jnp.int32) # returns closest triangle root
+        tri = row * (row + 1) // 2
+        col = jax.lax.select(row >= self.size, 0, state_ind - tri)
 
         obs = jnp.zeros((self.size, self.size)).at[row, col].set(1)
         state = EnvState(row, col, row > col, 0, 0, 0.99, jnp.ones_like(obs), row)
@@ -76,10 +89,11 @@ class DeepSea(JTabular):
 
     
     @partial(jax.jit, static_argnums=(0,))
-    def index(self, obs: chex.Array) -> int:
-        row, col = jnp.argwhere(obs == 1, size=1, fill_value=self.size)[0]
-        not_terminal = row < self.size
-        return jax.lax.select(not_terminal, row * self.size + col, self.size**2)
+    def index(self, state: EnvState) -> int:
+        row, col = state.row, state.column
+        tri = row * (row + 1) // 2
+        col = jax.lax.select(row >= self.size, 0, col)
+        return tri + col
     
 
     @property

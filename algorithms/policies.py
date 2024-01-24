@@ -144,7 +144,7 @@ class JDirectPolicy(JPolicy):
     params: chex.Array
 
     def act(self, obs: chex.Array) -> chex.Array:
-        return jnp.log(jnp.matmul(self.params.T, jnp.ravel(obs)))
+        return jnp.log(self.params[obs]) # assume last state is absorbing, discard
     
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
         if jnp.isinf(lr):
@@ -159,8 +159,8 @@ class JDirectPolicy(JPolicy):
         return JDirectPolicy(params=probas)
     
     @property
-    def probas(self): # TODO for compatibility with gymnax assume there is extra absorbing state for termination
-        return jnp.vstack([self.params, jnp.ones_like(self.params[0]) / 2])
+    def probas(self): 
+        return self.params
     
 
     @staticmethod
@@ -174,8 +174,8 @@ class JDirectPolicy(JPolicy):
 class JSoftmaxPolicy(JPolicy): # softmax policy
     logits: chex.Array
 
-    def act(self, obs: chex.Array) -> chex.Array: # needs one-hot encoded states
-        return jnp.matmul(self.logits.T, jnp.ravel(obs))
+    def act(self, obs: chex.Array) -> chex.Array: # needs state indices
+        return self.logits[obs]
 
 
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
@@ -193,7 +193,7 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
     @property
     def probas(self):
         probas = jnp.exp(self.logits) / jnp.sum(jnp.exp(self.logits), axis=1)[..., jnp.newaxis]
-        return jnp.vstack([probas, jnp.ones_like(probas[0]) / 2])
+        return probas
 
     def numpy(self):
         return SoftmaxPolicy(self.logits.shape[0], self.logits.shape[1])
