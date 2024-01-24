@@ -51,7 +51,7 @@ class JAlgorithm(object):
         
             run = wandb.init(project="rl_experiments", config=config, group=group, entity='kprotopapas')
 
-        filename = f'{env.name}-{env.size}-{env.gamma}.npy'
+        filename = f'{env.display_name}-{env.size}-{env.gamma}.npy'
         
         if filename not in os.listdir('backups'):
             Q_opt = env.optimal()

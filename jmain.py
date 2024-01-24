@@ -73,7 +73,7 @@ if __name__ == '__main__':
     
     #env = JTabular(P, R, mu, gamma, 'Stochastic')
     #env = Trap(size, gamma)
-    env = DeepSea(size, gamma, deterministic=True)
+    env = DeepSea(size, gamma, deterministic=False)
 
     # Formula from (Johnson 2023)
     epsilon = 1e-4
@@ -90,9 +90,9 @@ if __name__ == '__main__':
 
 
     H = size # fixed for deepsea because larger doesn't matter
-    M_f = 1 # deterministic
-    M_t = 1 # deterministic
-    M_l = 1 # Winnicki says this is good
+    M_f = 4 # deterministic
+    M_t = 4 # deterministic
+    M_l = 4 # Winnicki says this is good
 
     infos = []
     
