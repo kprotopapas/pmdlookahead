@@ -29,7 +29,6 @@ class JTabular(Environment):
         self.mu = mu
         self.gamma = gamma
         self.display_name = name
-        self.num_obs = None
 
 
     @property

@@ -12,7 +12,7 @@ from helper import random_simplex, parse_args
 
 def run(d=1):
     if alg == PGMCTS:
-        agent = alg(env, horizon=H, d=d, M_t=M_t, seed=seed) # time per iteration 0.3 s
+        agent = alg(env, horizon=H, depth=d, M_t=M_t, M_l=M_l) # time per iteration 0.3 s
     elif alg in [JDPQA, JDEQA]:
         agent = alg(env, horizon=H, d=d, M_t=M_t, M_l=M_l, M_f=M_f)
     else:
@@ -90,9 +90,9 @@ if __name__ == '__main__':
 
 
     H = size # fixed for deepsea because larger doesn't matter
-    M_f = 4 # deterministic
-    M_t = 4 # deterministic
-    M_l = 4 # Winnicki says this is good
+    M_f = 1 # deterministic
+    M_t = 50 # deterministic
+    M_l = 128 # Winnicki says we can do one episode
 
     infos = []
     

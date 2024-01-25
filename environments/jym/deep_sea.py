@@ -17,8 +17,8 @@ class DeepSea(JTabular):
         self.size = size
         self.env = env
         self.params = params
-        self.n_obs = self.size**2
-
+        self.num_obs = self.size**2
+        
         prb_swp = 1 / self.size
         num_states = self.size * (self.size + 1) // 2 + 1
 
