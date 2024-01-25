@@ -21,7 +21,7 @@ class Catch(JTabular):
         def step_state(s, a):
             _, state = self.inverse(s)
             key = jax.random.PRNGKey(0)
-            _, nstate, _, _, _ = env.step(key, state, a, params)
+            _, nstate, _, _, _ = env.step_env(key, state, a, params)
             ns = self.index(nstate)
 
             return jnp.zeros((num_states, )).at[ns].set(1)

@@ -20,15 +20,13 @@ key = jax.random.PRNGKey(42)
 obs, state = env.reset(key, params)
 
 
-for i in range(250):
-    timestep = i // 25
-    paddle = (i % 25) // 5
-    ball = i % 5
-    paddle_y = env.rows
+for s in range(my_env.num_states):
+    for a in range(my_env.num_actions):
+        obs, state = my_env.inverse(s)
+        nobs, nstate, reward, done, _ = env.step_env(key, state, a, params)
+        ni = my_env.index(nstate)
+        ni_guess = np.argmax(my_env.P[:, s, a])
+        r_guess = my_env.R[s, a]
 
-    obs, state = my_env.inverse(i)
-    nobs, nstate, reward, done, _ = env.step_env(key, state, 0, params)
-    ni = my_env.index(nstate)
-    assert ni < 250
-    ni_guess = ball + max(paddle - 1, 0) * 5 + min(timestep + 1, env.rows - 1) * 25
-    assert ni == ni_guess
+        assert ni_guess == ni
+        assert r_guess == reward
