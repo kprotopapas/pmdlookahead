@@ -9,41 +9,26 @@ import gymnax
 
 from helper import *
 
-from environments.jym import JDeepsea
-from environments.jym import DeepSea
+from environments.jym import DeepSea, Catch, JDeepsea
 from environments.solvable import Deepsea
 
-size = 2
-gamma = 0.99
+my_env = Catch(0.99)
 
-new_env = DeepSea(size, gamma, deterministic=False)
-opt = new_env.optimal()
+env, params = gymnax.make('Catch-bsuite')
 
-jenv = JDeepsea(size, gamma)
-opt_mine = jenv.optimal()
-
-V_opt = opt_mine.max(axis=1)
-reshaped = np.zeros((size, size))
-for i in range(size * (size + 1) // 2):
-    obs, state = new_env.inverse(i)
-    row = state.row
-    col = state.column
-    reshaped[row, col] = V_opt[i]
+key = jax.random.PRNGKey(42)
+obs, state = env.reset(key, params)
 
 
+for i in range(250):
+    timestep = i // 25
+    paddle = (i % 25) // 5
+    ball = i % 5
+    paddle_y = env.rows
 
-indices = np.tril(np.arange(size * size).reshape((size, size))).flatten()
-indices = np.hstack((np.array([0]), indices[np.nonzero(indices)], np.array([size**2])))
-
-real_env = Deepsea(size, gamma)
-real_opt = real_env.optimal()
-real_opt = real_opt[indices]
-
-
-P_real = real_env.P[indices, :, :][:, indices, :]
-P_new = new_env.P
-P_old = jenv.P
-
-print(P_new - P_real)
-print(P_old - P_real)
-pass
+    obs, state = my_env.inverse(i)
+    nobs, nstate, reward, done, _ = env.step_env(key, state, 0, params)
+    ni = my_env.index(nstate)
+    assert ni < 250
+    ni_guess = ball + max(paddle - 1, 0) * 5 + min(timestep + 1, env.rows - 1) * 25
+    assert ni == ni_guess

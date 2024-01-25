@@ -5,8 +5,7 @@ import time
 import pandas as pd
 from algorithms.tree import PGMCTS
 
-from environments.jym import DeepSea
-from environments.solvable import *
+from environments.jym import *
 from algorithms.jym import *
 from helper import random_simplex, parse_args
 
@@ -73,7 +72,9 @@ if __name__ == '__main__':
     
     #env = JTabular(P, R, mu, gamma, 'Stochastic')
     #env = Trap(size, gamma)
-    env = DeepSea(size, gamma, deterministic=True)
+    #env = DeepSea(size, gamma, deterministic=True)
+
+    env = Catch(gamma, rows=size // 2, columns=size // 8)
 
     # Formula from (Johnson 2023)
     epsilon = 1e-4
@@ -90,9 +91,9 @@ if __name__ == '__main__':
 
 
     H = size # fixed for deepsea because larger doesn't matter
-    M_f = 1 # deterministic
-    M_t = 50 # deterministic
-    M_l = 128 # Winnicki says we can do one episode
+    M_f = 4 # deterministic
+    M_t = 4 # deterministic
+    M_l = 4 # Winnicki says we can do one episode
 
     infos = []
     

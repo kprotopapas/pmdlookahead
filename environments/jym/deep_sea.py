@@ -60,8 +60,10 @@ class DeepSea(JTabular):
         R = R.at[num_states - 1, :].set(0)
         mu = jnp.zeros((num_states, )).at[0].set(1)
 
-        name = 'DeepSea-Wrapper' + (f'-rand' if not deterministic else '')
+        name = 'DeepSea-Wrapper'
         super().__init__(P, R, mu, gamma, name)
+        self.config['size'] = size
+        self.print_name = name + (f'-rand' if not deterministic else '') + f'-{size}-{gamma}'
 
 
     @partial(jax.jit, static_argnums=(0, ))

@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO)
 class JAlgorithm(object):
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int, pi: JPolicy, name: str):
         self.config = {'algorithm': name,
-                       'environment': {'name': env.display_name, 'gamma': env.gamma},
+                       'environment': env.config,
                        'horizon': horizon,
                        'trajectories': n_trajectories}
         self.horizon = horizon
@@ -51,7 +51,7 @@ class JAlgorithm(object):
         
             run = wandb.init(project="rl_experiments", config=config, group=group, entity='kprotopapas')
 
-        filename = f'{env.display_name}-{env.size}-{env.gamma}.npy'
+        filename = f'{env.print_name}.npy'
         
         if filename not in os.listdir('backups'):
             Q_opt = env.optimal()

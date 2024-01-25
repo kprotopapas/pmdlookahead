@@ -3,65 +3,57 @@ from functools import partial
 from jax import numpy as jnp
 import jax
 import chex
-from gymnax.environments.bsuite.deep_sea import EnvParams, EnvState
+from gymnax.environments.bsuite.catch import EnvParams, EnvState
 
 
 from environments.jym import JTabular
 
 
 # Wrapper for the DeepSea environment with explicit P, R, µ matrices and without state resets at the end of episode
-class DeepSea(JTabular):
-    def __init__(self, size: int, gamma: float, deterministic: bool = True):
-        env, params = gymnax.make('Catch-bsuite', size=size)
-        params = params.replace(deterministic=deterministic)
-        self.size = size
+class Catch(JTabular):
+    def __init__(self, gamma: float, rows: int = 10, columns: int = 5):
+        env, params = gymnax.make('Catch-bsuite', rows=rows, columns=columns)
         self.env = env
         self.params = params
-        self.num_obs = self.size**2
+        num_states = columns * columns * rows # terminal states are where paddle is on last row, can recycle them
         
-        prb_swp = 1 / self.size
-        num_states = self.size * (self.size + 1) // 2 + 1
+        
+        def step_state(s, a):
+            _, state = self.inverse(s)
+            key = jax.random.PRNGKey(0)
+            _, nstate, _, _, _ = env.step(key, state, a, params)
+            ns = self.index(nstate)
 
-        def step(s, a):
-            # nondeterministic transition: left -> left, right -> 1 / size * left + (1 - 1 / size) * right
-            row = jnp.floor((jnp.sqrt(8 * s + 1) - 1) / 2).astype(jnp.int32) # returns closest triangle root
-            tri = row * (row + 1) // 2
-            col = s - tri
+            return jnp.zeros((num_states, )).at[ns].set(1)
 
-            nrow = jnp.minimum(row + 1, self.size).astype(jnp.int32)
 
-            dx = 2 * a - 1
-            ncol_det = jax.lax.select(row >= self.size - 1, 0, jnp.clip(col + dx, 0, self.size - 1))
-            ncol_swp = jax.lax.select(row >= self.size - 1, 0, jnp.clip(col - dx, 0, self.size - 1))
-
-            ntri = nrow * (nrow + 1) // 2
-            sp_det = ntri + ncol_det
-            
-            sp_swp = ntri + ncol_swp
-            
-            base = jnp.zeros((num_states, ), dtype=jnp.float32)
-            sp_oh_det = base.at[sp_det].set(1)
-            sp_oh_swp = base.at[sp_det].add(1 - prb_swp).at[sp_swp].add(prb_swp)
-
-            return jax.lax.select(deterministic, sp_oh_det, sp_oh_swp)
+        def step_reward(s, a):
+            _, state = self.inverse(s)
+            key = jax.random.PRNGKey(0)
+            _, _, r, _, _ = env.step(key, state, a, params)
+            return r
         
 
         states = jnp.arange(num_states)
         actions = jnp.arange(2)
 
-        over_states = jax.vmap(step, (0, None), 1)
+        over_states = jax.vmap(step_state, (0, None), 1)
         over_both = jax.vmap(over_states, (None, 0), 2)
         P = over_both(states, actions)
 
-        penalty = -0.01 / size
-        R = jnp.zeros((num_states, 2)).at[:, 1].set(penalty)
-        
-        R = R.at[num_states - 2, 1].set(1 + penalty)
-        R = R.at[num_states - 1, :].set(0)
-        mu = jnp.zeros((num_states, )).at[0].set(1)
+        over_states = jax.vmap(step_reward, (0, None), 0)
+        over_both = jax.vmap(over_states, (None, 0), 1)
+        R = over_both(states, actions)
 
-        name = 'DeepSea-Wrapper' + (f'-rand' if not deterministic else '')
+
+        start = (columns // 2) * columns
+        mu = jnp.zeros((num_states, )).at[start: start + columns].set(1 / columns)
+
+        name = f'Catch-Wrapper'
         super().__init__(P, R, mu, gamma, name)
+        self.config['rows'] = rows
+        self.config['columns'] = columns
+        self.print_name = f'{name}-{rows}x{columns}-{gamma}'
 
 
     @partial(jax.jit, static_argnums=(0, ))
@@ -76,25 +68,26 @@ class DeepSea(JTabular):
 
     @property
     def embedding(self) -> chex.Array:
-        return jnp.arange(self.size**2).reshape((self.size, self.size))
+        return 1
     
     @partial(jax.jit, static_argnums=(0,))
     def inverse(self, state_ind: int) -> tuple[chex.Array, EnvState]:
-        row = jnp.floor((jnp.sqrt(8 * state_ind + 1) - 1) / 2).astype(jnp.int32) # returns closest triangle root
-        tri = row * (row + 1) // 2
-        col = jax.lax.select(row >= self.size, 0, state_ind - tri)
+        timestep = state_ind // self.env.columns**2
 
-        obs = jnp.zeros((self.size, self.size)).at[row, col].set(1)
-        state = EnvState(row, col, row > col, 0, 0, 0.99, jnp.ones_like(obs), row)
+        paddle = (state_ind % self.env.columns**2) // self.env.columns
+        ball = state_ind % self.env.columns
+
+        state = EnvState(ball_x=ball, ball_y=timestep, 
+                         paddle_x=paddle, paddle_y=self.env.rows - 1, prev_done=False, time=timestep)
+        obs = self.env.get_obs(state)
         return obs, state
 
-    
-    @partial(jax.jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0,))    
     def index(self, state: EnvState) -> int:
-        row, col = state.row, state.column
-        tri = row * (row + 1) // 2
-        col = jax.lax.select(row >= self.size, 0, col)
-        return tri + col
+        nball = state.ball_x
+        npaddle = state.paddle_x * self.env.columns
+        ntime = jnp.minimum(state.ball_y, self.env.rows - 1) * self.env.columns**2
+        return nball + npaddle + ntime
     
 
     @property

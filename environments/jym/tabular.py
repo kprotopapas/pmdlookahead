@@ -29,6 +29,8 @@ class JTabular(Environment):
         self.mu = mu
         self.gamma = gamma
         self.display_name = name
+        self.config = {'name': name, 'gamma': gamma}
+        self.print_name = None
 
 
     @property
