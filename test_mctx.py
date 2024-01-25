@@ -26,11 +26,9 @@ gamma = 0.99
 key = jax.random.PRNGKey(42)
 
 env = Deepsea(size, gamma)
-jenv = JDeepsea(size=size, gamma=gamma)
-params = None
+jenv = Catch(0.99, rows=32, columns=8)
+params = jenv.params
 
-
-#jenv, params = gymnax.make('DeepSea-bsuite', size=size)
 obs, state = jenv.reset(key, params)
 
 for i in range(12):

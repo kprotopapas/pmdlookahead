@@ -90,9 +90,9 @@ if __name__ == '__main__':
     print(f'M_f: {M_f}')
 
 
-    H = size # fixed for deepsea because larger doesn't matter
+    H = size // 2 # fixed for deepsea because larger doesn't matter
     M_f = 4 # deterministic
-    M_t = 4 # deterministic
+    M_t = 50 # deterministic
     M_l = 4 # Winnicki says we can do one episode
 
     infos = []

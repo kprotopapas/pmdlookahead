@@ -35,7 +35,7 @@ class Catch(JTabular):
         
 
         states = jnp.arange(num_states)
-        actions = jnp.arange(2)
+        actions = jnp.arange(env.num_actions)
 
         over_states = jax.vmap(step_state, (0, None), 1)
         over_both = jax.vmap(over_states, (None, 0), 2)

@@ -1,9 +1,10 @@
-from gymnax import EnvParams
+from gymnax import EnvParams, EnvState
 import mctx
 import jax
 import chex
 import numpy as np
 from scipy.stats import entropy
+from functools import partial
 
 
 from jax import numpy as jnp
@@ -32,55 +33,64 @@ class PGMCTS(JAlgorithm):
         self.config['depth'] = self.depth
         self.config['episodes'] = self.n_episodes
         self.config['rollouts'] = self.M_l
+
+
+    @partial(jax.jit, static_argnums=(0, 2))
+    def sample_trajectory_from_state(self, key: chex.PRNGKey, env: JTabular, params: EnvParams,
+                          obs: chex.Array, state: EnvState, priors: chex.Array, pi: JPolicy):
+        
+        def step(a: tuple[chex.PRNGKey, chex.Array, EnvState, jnp.bool_], prior: chex.Array):
+            key, obs, state, old_done = a
+            new_key, env_key, action_key = jax.random.split(key, 3)
+            ind = env.index(state)
+            logits = pi.act(ind)
+            action = jax.random.categorical(action_key, logits + prior)
+            nobs, nstate, reward, done, _ = env.step(env_key, state, action, params)
+            reward = jnp.where(old_done, 0, reward)
+            return (new_key, nobs, nstate, done | old_done), (ind, action, reward)
+
+
+        carry, ys = jax.lax.scan(step, (key, obs, state, jnp.bool_(False)), priors, length=self.horizon)
+
+        nkey, nobs, nstate, done = carry
+        indices, actions, rewards = ys
+        index = env.index(nstate)
+        indices = jnp.insert(indices, -1, index)
+        return indices, actions, rewards
+    
     
 
     # Plays a certain number of episodes to estimate the value function
+    @partial(jax.jit, static_argnums=(0, 2))
     def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, pi: JPolicy):
-        Q = jnp.zeros_like(self.pi.probas)
-        visits = jnp.zeros((Q.shape[0], ))
+        traj_key, tree_key = jax.random.split(key)
+        indices, actions, rewards = self.sample_trajectory(key, env, params, pi)
+        obs_batch, state_batch = jax.vmap(env.inverse)(indices)
 
-        #seed = int.from_bytes(os.urandom(2), 'big')
+        def lookahead(key: chex.PRNGKey, obs: chex.Array, state: EnvState):
+            output: PolicyOutput = run_mcts(env,
+                                            params,
+                                            self.depth,
+                                            self.simulations,
+                                            self.M_l,
+                                            env.gamma,
+                                            key,
+                                            obs,
+                                            state,
+                                            self.pi)
+            tree = output.search_tree
+            grad_k = tree.children_rewards[0, 0] + env.gamma * tree.children_values[0, 0]
+            return grad_k
 
-        for k in range(self.n_episodes): # TODO: VMAP!!!!!!!
-            key, reset_key, step_key, action_key, tree_key = jax.random.split(key, 5)
-            obs, state = env.reset(reset_key, params)
         
-            actions = []
-            observations = [obs]
-            rewards = []
-
-            done = False
-            while not done: # maybe change to jax.lax.while_loop
-                # maybe change to fixed horizon rollouts for larger games!!!
-                output: PolicyOutput = run_mcts(env,
-                                                params,
-                                                self.depth,
-                                                self.simulations,
-                                                self.M_l,
-                                                env.gamma,
-                                                tree_key,
-                                                obs,
-                                                state,
-                                                self.pi)
-                tree = output.search_tree
-                grad_k = tree.children_rewards[0, 0] + env.gamma * tree.children_values[0, 0]
-
-                ind = env.index(state)
-                Q = Q.at[ind].add(grad_k)
-                visits = visits.at[ind].add(1)
-
-                logits = self.pi.act(ind)
-                action = jax.random.categorical(action_key, logits)
-                obs, state, reward, done, _ = env.step(step_key, state, action, params)
-
-                actions.append(action)
-                observations.append(obs)
-                rewards.append(reward)
-
-
-        Q = Q / np.maximum(visits, 1).reshape(-1, 1)
+        keys = jax.random.split(tree_key, self.horizon + 1)
+        gradients = jax.vmap(lookahead, (0, 0, 0))(keys, obs_batch, state_batch)
+        
+        
+        Q = jnp.zeros_like(self.pi.probas).at[indices].set(gradients)
+    
             
-        return np.array(Q), self.simulations * self.depth * self.M_l
+        return Q, self.horizon * self.simulations * self.depth * self.M_l
 
 
     def grad_exact(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: chex.Array, pi: JPolicy):
