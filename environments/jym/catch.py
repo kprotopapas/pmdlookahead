@@ -9,7 +9,7 @@ from gymnax.environments.bsuite.catch import EnvParams, EnvState
 from environments.jym import JTabular
 
 
-# Wrapper for the DeepSea environment with explicit P, R, µ matrices and without state resets at the end of episode
+# Wrapper for the Catch environment with explicit P, R, µ matrices and without state resets at the end of episode
 class Catch(JTabular):
     def __init__(self, gamma: float, rows: int = 10, columns: int = 5):
         env, params = gymnax.make('Catch-bsuite', rows=rows, columns=columns)

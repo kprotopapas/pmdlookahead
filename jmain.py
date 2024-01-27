@@ -72,9 +72,9 @@ if __name__ == '__main__':
     
     #env = JTabular(P, R, mu, gamma, 'Stochastic')
     #env = Trap(size, gamma)
-    #env = DeepSea(size, gamma, deterministic=True)
+    env = DeepSea(size, gamma, deterministic=True)
 
-    env = Catch(gamma, rows=size // 2, columns=size // 8)
+    #env = Catch(gamma, rows=64, columns=5)
 
     # Formula from (Johnson 2023)
     epsilon = 1e-4
@@ -90,9 +90,9 @@ if __name__ == '__main__':
     print(f'M_f: {M_f}')
 
 
-    H = size // 2 # fixed for deepsea because larger doesn't matter
+    H = size # fixed for deepsea because larger doesn't matter
     M_f = 4 # deterministic
-    M_t = 50 # deterministic
+    M_t = 4 # deterministic
     M_l = 4 # Winnicki says we can do one episode
 
     infos = []

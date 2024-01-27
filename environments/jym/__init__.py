@@ -1,4 +1,4 @@
-from .deepsea import JDeepsea
+from .my_deepsea import JDeepsea
 from .trap import JTrap
 from .tabular import JTabular
 from .deep_sea import DeepSea
