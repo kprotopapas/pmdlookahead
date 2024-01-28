@@ -10,17 +10,18 @@ import gymnax
 
 from helper import *
 
-from environments.jym import DeepSea, Catch, JDeepsea
+from environments.jym import DeepSea, Catch, JDeepsea, Gridworld
 from environments.solvable import Deepsea
 
-env = Catch(0.99, rows=32, columns=8)
-
-alg = PGMCTS(env, 32, 5, M_f=1, M_l=128, M_t=50)
+env = Gridworld(0.99, rows=6, columns=4, deterministic=False, seed=78)
+params = env.params
 key = jax.random.PRNGKey(42)
-duration = timeit.timeit(lambda: alg.sample_trajectory(key, env, env.params, alg.pi), number=10)
-print(f'Time: {duration / 10}')
+obs, state = env.reset(key, params)
+print(obs)
 
-alg = JDEQA(env, 32, d=5, M_l=4, M_t=4, M_f=4)
-duration = timeit.timeit(lambda: alg.sample_trajectory(key, env, env.params, alg.pi), number=10)
-
-print(f'Time: {duration / 10}')
+while True:
+    action = int(input())
+    key, subkey = jax.random.split(key)
+    obs, state, reward, done, _ = env.step(subkey, state, action, params)
+    print(obs)
+    print(reward)

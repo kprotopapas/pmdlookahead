@@ -3,6 +3,7 @@ from .trap import JTrap
 from .tabular import JTabular
 from .deep_sea import DeepSea
 from .catch import Catch
+from .gridworld import Gridworld
 
 
 __all__ = [
@@ -10,5 +11,6 @@ __all__ = [
     "JTrap",
     "JTabular",
     "DeepSea",
-    "Catch"
+    "Catch",
+    "Gridworld"
 ]

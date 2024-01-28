@@ -1,20 +1,22 @@
+from chex._src.pytypes import Array
 import gymnax
 from functools import partial
+from gymnax.environments.environment import EnvState
 from jax import numpy as jnp
 import jax
 import chex
-from gymnax.environments.bsuite.catch import EnvParams, EnvState
+from gymnax.environments.bsuite.memory_chain import EnvParams, EnvState
 
 
 from environments.jym import JTabular
 
 
-# Wrapper for the DeepSea environment with explicit P, R, µ matrices and without state resets at the end of episode
-class Catch(JTabular):
+# Wrapper for the MemoryChain environment with explicit P, R, µ matrices and without state resets at the end of episode
+class MemoryChain(JTabular):
     def __init__(self, gamma: float, num_bits: int = 1, memory_length: int = 5):
         env, params = gymnax.make('MemoryChain-bsuite')
         self.env = env
-        self.params = params.replace(memory_length=memory_length)
+        self.params: EnvParams = params.replace(memory_length=memory_length)
         num_states = 2**num_bits * num_bits * params.memory_length + 1 # 2^num_bits contexts * num_bits queries * memory_length timesteps + terminal
         
         
@@ -65,6 +67,9 @@ class Catch(JTabular):
         return self.env.reset_env(key, params)
 
 
+    def get_obs(self, state: EnvState) -> Array:
+        return self.env.get_obs(state)
+
     @property
     def embedding(self) -> chex.Array:
         return 1
@@ -75,7 +80,11 @@ class Catch(JTabular):
 
     @partial(jax.jit, static_argnums=(0,))    
     def index(self, state: EnvState) -> int:
-        raise NotImplementedError
+        context = state.context
+        query = state.query
+        time = state.time
+        terminal = time > self.params.memory_length
+        
     
 
     @property
