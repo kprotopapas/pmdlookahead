@@ -47,14 +47,16 @@ class Gridworld(JTabular):
             _, state = self.inverse(s)
             key = jax.random.PRNGKey(0)
             _, nstate, _, _, _ = self.step(key, state, a, params.replace(deterministic=True))
-            opposite_action = (a + 2) % 4
+            opposite_action = (a + 2) % 45
             _, nswap, _, _, _ = self.step(key, state, opposite_action, params.replace(deterministic=True))
             ns = self.index(nstate)
             nswap = self.index(nswap)
             
             mag = jax.lax.select(a % 2 == 0, self.rows, self.columns)
+            non_det = jnp.zeros((num_states, )).at[ns].set(1 - 1 / mag).at[nswap].set(1 / mag)
+            det = jnp.zeros((num_states, )).at[ns].set(1)
 
-            return jnp.zeros((num_states, )).at[ns].set(1 - 1 / mag).at[nswap].set(1 / mag)
+            return jax.lax.select(deterministic, det, non_det)
 
 
         def step_reward(s, a):
@@ -146,10 +148,10 @@ class Gridworld(JTabular):
 
     @partial(jax.jit, static_argnums=(0,))
     def inverse(self, state_ind: int) -> tuple[chex.Array, EnvState]:
-        row = state_ind // self.columns
-        col = state_ind % self.columns
+        pos_y = state_ind // self.columns
+        pos_x = state_ind % self.columns
 
-        state = EnvState(row, col)
+        state = EnvState(pos_x=pos_x, pos_y=pos_y)
         obs = self.get_obs(state)
         return obs, state
 

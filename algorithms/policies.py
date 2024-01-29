@@ -155,6 +155,7 @@ class JDirectPolicy(JPolicy):
         new = self.params + lr * grad
         over_axis = jax.vmap(jax_simplex_project_bijection, (0,))
         probas = over_axis(new - new.mean(axis=1)[..., jnp.newaxis])
+        probas /= probas.sum(axis=1)[..., jnp.newaxis]
 
         return JDirectPolicy(params=probas)
     
