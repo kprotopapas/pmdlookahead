@@ -72,10 +72,10 @@ if __name__ == '__main__':
     
     #env = JTabular(P, R, mu, gamma, 'Stochastic')
     #env = Trap(size, gamma)
-    #env = DeepSea(size, gamma, deterministic=True)
+    env = DeepSea(size, gamma, deterministic=True)
     #env = Catch(gamma, rows=13, columns=13)
 
-    env = Gridworld(gamma, rows=48, columns=48, deterministic=True, seed=seed)
+    #env = Gridworld(gamma, rows=48, columns=48, deterministic=True, seed=seed)
 
     # Formula from (Johnson 2023)
     epsilon = 1e-4
