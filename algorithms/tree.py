@@ -64,7 +64,7 @@ class PGMCTS(JAlgorithm):
     @partial(jax.jit, static_argnums=(0, 2))
     def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, pi: JPolicy):
         traj_key, tree_key = jax.random.split(key)
-        indices, actions, rewards = self.sample_trajectory(key, env, params, pi)
+        indices, actions, rewards = self.sample_trajectory(traj_key, env, params, pi)
         obs_batch, state_batch = jax.vmap(env.inverse)(indices)
 
         def lookahead(key: chex.PRNGKey, obs: chex.Array, state: EnvState):

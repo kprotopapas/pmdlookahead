@@ -6,6 +6,7 @@ import pandas as pd
 from algorithms.tree import PGMCTS
 
 from environments.jym import *
+from environments.jym.my_deepsea import JDeepsea
 from algorithms.jym import *
 from helper import random_simplex, parse_args
 
@@ -72,7 +73,8 @@ if __name__ == '__main__':
     
     #env = JTabular(P, R, mu, gamma, 'Stochastic')
     #env = Trap(size, gamma)
-    env = DeepSea(size, gamma, deterministic=True)
+    #env = DeepSea(size, gamma, deterministic=True)
+    env = JDeepsea(size, gamma)
     #env = Catch(gamma, rows=13, columns=13)
 
     #env = Gridworld(gamma, rows=48, columns=48, deterministic=True, seed=seed)
@@ -94,7 +96,7 @@ if __name__ == '__main__':
     H = size # fixed for deepsea because larger doesn't matter
     M_f = 4 # deterministic
     M_t = 50 # deterministic
-    M_l = 4 # Winnicki says we can do one episode
+    M_l = 128 # Winnicki says we can do one episode
 
     infos = []
     
