@@ -107,12 +107,14 @@ print()
 
 print('Running again')
 start = time.time()
+key = jax.random.PRNGKey(32) # to avoid cache
 lookahead2: PolicyOutput = run_mcts(jenv, params, depth, N, M_l, gamma, key, obs, state, jpolicy)
 print(f'Took {time.time() - start} seconds')
 
 print()
 print('Running again')
 start = time.time()
+key = jax.random.PRNGKey(52) # to avoid cache
 lookahead2: PolicyOutput = run_mcts(jenv, params, depth, N, M_l, gamma, key, obs, state, jpolicy)
 print(f'Took {time.time() - start} seconds')
 
