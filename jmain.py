@@ -73,7 +73,7 @@ if __name__ == '__main__':
     
     #env = JTabular(P, R, mu, gamma, 'Stochastic')
     #env = Trap(size, gamma)
-    env = DeepSea(size, gamma, deterministic=False)
+    env = DeepSea(size, gamma, deterministic=True)
     #env = JDeepsea(size, gamma)
     #env = Catch(gamma, rows=13, columns=13)
 
@@ -94,9 +94,9 @@ if __name__ == '__main__':
 
 
     H = size # fixed for deepsea because larger doesn't matter
-    M_f = 16 # deterministic
-    M_t = 16 # deterministic
-    M_l = 16 # Winnicki says we can do one episode
+    M_f = 1 # deterministic
+    M_t = 50 # deterministic
+    M_l = 128 # Winnicki says we can do one episode
 
     infos = []
     
