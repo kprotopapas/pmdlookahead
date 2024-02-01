@@ -73,7 +73,7 @@ if __name__ == '__main__':
     
     #env = JTabular(P, R, mu, gamma, 'Stochastic')
     #env = Trap(size, gamma)
-    env = DeepSea(size, gamma, deterministic=True)
+    env = DeepSea(size, gamma, deterministic=False)
     #env = JDeepsea(size, gamma)
     #env = Catch(gamma, rows=13, columns=13)
 
