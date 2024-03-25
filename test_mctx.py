@@ -3,6 +3,7 @@ from jax import numpy as jnp
 import numpy as np
 import time
 from algorithms.policies import JSoftmaxPolicy
+from algorithms.tree import PGMCTS
 
 from environments.jym import *
 from environments.solvable import *
@@ -21,11 +22,11 @@ M_l = 128
 
 
 size = 64
-depth = 8
+depth = 2
 gamma = 0.99
 key = jax.random.PRNGKey(42)
 
-jenv = DeepSea(64, 0.99)
+jenv = DeepSea(size, gamma)
 params = jenv.params
 
 obs, state = jenv.reset(key, params)
@@ -36,8 +37,9 @@ for i in range(12):
 
 jpolicy = JSoftmaxPolicy.uniform(jenv.num_states, jenv.num_actions)
 
-JV = jenv.V(jpolicy)
-JQ = jenv.Q(jpolicy)
+Q = jenv.Q(jpolicy)
+V = jenv.V(jpolicy)
+JV = jnp.array(V)
 
 oright, sright, rright, _, _ = jenv.step(key, state, 1, params)
 oleft, sleft, rleft, _, _ = jenv.step(key, state, 0, params)
@@ -56,7 +58,7 @@ print(state)
 print()
 print('Real vs approx Q function')
 s = jenv.index(state)
-print(JQ[s])
+print(Q[s])
 print(np.array([rleft + gamma * vleft, rright + gamma * vright]))
 print()
 root = jax.jit(root_fn, static_argnums=(0, 2, 3))
@@ -78,7 +80,7 @@ print('Recurrent Function Left')
 print(rfl)
 print()
 
-tdm = JV
+tdm = V
 for _ in range(depth - 1):
     tdm = jenv.bellman(tdm)
 
@@ -111,5 +113,11 @@ start = time.time()
 lookahead2: PolicyOutput = run_mcts(jenv, params, depth, N, M_l, gamma, key, obs, state, jpolicy)
 print(f'Took {time.time() - start} seconds')
 
-pass
-# TODO SUBTREEEEEEEES
+alg = PGMCTS(jenv, depth=depth, M_l = M_l, M_t = N)
+
+print(f'Sampling trajectory')
+start = time.time()
+traj_key, tree_key = jax.random.split(key)
+indices, actions, rewards = alg.sample_trajectory(traj_key, jenv, params, alg.pi)
+obs_batch, state_batch = jax.vmap(jenv.inverse)(indices)
+print(f'Took {time.time() - start} seconds')
