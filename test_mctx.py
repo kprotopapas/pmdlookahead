@@ -25,23 +25,19 @@ depth = 8
 gamma = 0.99
 key = jax.random.PRNGKey(42)
 
-env = Deepsea(size, gamma)
-jenv = Catch(0.99, rows=32, columns=8)
+jenv = DeepSea(64, 0.99)
 params = jenv.params
 
 obs, state = jenv.reset(key, params)
 
 for i in range(12):
     obs, state, _, _, _ = jenv.step(key, state, 1, params)
-    env.step(1)
 
 
-jpolicy = JSoftmaxPolicy.uniform(env.n_obs, env.n_act)
-policy = SoftmaxPolicy(env.n_obs, env.n_act)
+jpolicy = JSoftmaxPolicy.uniform(jenv.num_states, jenv.num_actions)
 
-Q = env.Q(policy)
-V = env.V(policy)
-JV = jnp.array(V)
+JV = jenv.V(jpolicy)
+JQ = jenv.Q(jpolicy)
 
 oright, sright, rright, _, _ = jenv.step(key, state, 1, params)
 oleft, sleft, rleft, _, _ = jenv.step(key, state, 0, params)
@@ -59,7 +55,8 @@ print('State')
 print(state)
 print()
 print('Real vs approx Q function')
-print(Q[env.state])
+s = jenv.index(state)
+print(JQ[s])
 print(np.array([rleft + gamma * vleft, rright + gamma * vright]))
 print()
 root = jax.jit(root_fn, static_argnums=(0, 2, 3))
@@ -81,13 +78,13 @@ print('Recurrent Function Left')
 print(rfl)
 print()
 
-tdm = V
+tdm = JV
 for _ in range(depth - 1):
-    tdm = env.bellman(tdm)
+    tdm = jenv.bellman(tdm)
 
-gamma = env.gamma
-next_V = np.sum(env.P * tdm[..., np.newaxis, np.newaxis], axis=0)
-Q_d = env.R + gamma * next_V
+gamma = jenv.gamma
+next_V = np.sum(jenv.P * tdm[..., np.newaxis, np.newaxis], axis=0)
+Q_d = jenv.R + gamma * next_V
 
 start = time.time()
 
@@ -97,10 +94,10 @@ Q_hat = gamma * lookahead.search_tree.children_values[0, 0] + lookahead.search_t
 print(f'Total ran in {time.time() - start} seconds')
 print()
 print('Real vs approx Q_d function')
-print(Q_d[env.state])
+print(Q_d[s])
 print(Q_hat)
-error = np.linalg.norm(Q_d[env.state] - Q_hat, ord=np.inf)
-print(f'Error: {error / np.max(np.abs(Q_d[env.state]))}')
+error = np.linalg.norm(Q_d[s] - Q_hat, ord=np.inf)
+print(f'Error: {error / np.max(np.abs(Q_d[s]))}')
 print()
 
 print('Running again')
