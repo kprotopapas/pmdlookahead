@@ -18,7 +18,7 @@ args = parse_args()
 group = args.group
 depth = args.d
 N = 50
-M_l = 128
+M_l = 64
 
 
 size = 64
@@ -111,13 +111,49 @@ print()
 print('Running again')
 start = time.time()
 lookahead2: PolicyOutput = run_mcts(jenv, params, depth, N, M_l, gamma, key, obs, state, jpolicy)
-print(f'Took {time.time() - start} seconds')
+duration = time.time() - start
+print(f'Took {duration} seconds')
 
-alg = PGMCTS(jenv, depth=depth, M_l = M_l, M_t = N)
+alg = PGMCTS(jenv, depth=depth, M_l=M_l, M_t = N, horizon=size)
+print(f'Without vectorisation would take {duration * alg.horizon} to estimate value')
+
+print()
 
 print(f'Sampling trajectory')
 start = time.time()
 traj_key, tree_key = jax.random.split(key)
 indices, actions, rewards = alg.sample_trajectory(traj_key, jenv, params, alg.pi)
-obs_batch, state_batch = jax.vmap(jenv.inverse)(indices)
 print(f'Took {time.time() - start} seconds')
+
+i = indices[0]
+obs, state = jenv.inverse(i)
+output: PolicyOutput = run_mcts(jenv, params, depth, N, M_l, gamma, key, obs, state, alg.pi)
+tree = output.search_tree
+grad_k = tree.children_rewards[0, 0] + jenv.gamma * tree.children_values[0, 0]
+
+start = time.time()
+obs, state = jenv.inverse(i)
+output: PolicyOutput = run_mcts(jenv, params, depth, N, M_l, gamma, key, obs, state, alg.pi)
+tree = output.search_tree
+grad_k = tree.children_rewards[0, 0] + jenv.gamma * tree.children_values[0, 0]
+end = time.time()
+
+print(f'Should take {end - start} seconds, total {(end - start) * len(indices)} for {len(indices)} states')
+
+alg = PGMCTS(jenv, size, 2, 1, 128, 50)
+self = alg
+traj_key, tree_key = jax.random.split(key)
+indices, actions, rewards = self.sample_trajectory(traj_key, jenv, params, alg.pi)
+
+keys = jax.random.split(tree_key, len(indices))
+gradients = []
+for (i, key) in zip(indices, keys):
+    obs, state = self.env.inverse(i)
+    output: PolicyOutput = run_mcts(self.env, params, self.depth, self.n_trajectories, self.M_l,
+                                    self.env.gamma, key, obs, state, alg.pi)
+    tree = output.search_tree
+    grad_k = tree.children_rewards[0, 0] + self.env.gamma * tree.children_values[0, 0]
+    gradients.append(grad_k)
+
+
+Q = jnp.zeros_like(self.pi.probas).at[indices].set(gradients)

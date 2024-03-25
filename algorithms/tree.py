@@ -65,31 +65,19 @@ class PGMCTS(JAlgorithm):
     def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, pi: JPolicy):
         traj_key, tree_key = jax.random.split(key)
         indices, actions, rewards = self.sample_trajectory(traj_key, env, params, pi)
-        obs_batch, state_batch = jax.vmap(env.inverse)(indices)
 
-        def lookahead(key: chex.PRNGKey, obs: chex.Array, state: EnvState):
-            output: PolicyOutput = run_mcts(env,
-                                            params,
-                                            self.depth,
-                                            self.simulations,
-                                            self.M_l,
-                                            env.gamma,
-                                            key,
-                                            obs,
-                                            state,
-                                            self.pi)
+        keys = jax.random.split(tree_key, len(indices))
+        gradients = []
+        for (i, key) in zip(indices, keys):
+            obs, state = self.env.inverse(i)
+            output: PolicyOutput = run_mcts(self.env, params, self.depth, self.n_trajectories, self.M_l,
+                                            self.env.gamma, key, obs, state, pi)
             tree = output.search_tree
-            grad_k = tree.children_rewards[0, 0] + env.gamma * tree.children_values[0, 0]
-            return grad_k
-
-        
-        keys = jax.random.split(tree_key, self.horizon + 1)
-        gradients = jax.vmap(lookahead, (0, 0, 0))(keys, obs_batch, state_batch)
+            grad_k = tree.children_rewards[0, 0] + self.env.gamma * tree.children_values[0, 0]
+            gradients.append(grad_k)
         
         
         Q = jnp.zeros_like(self.pi.probas).at[indices].set(gradients)
-    
-            
         return Q, self.horizon * self.simulations * self.depth * self.M_l
 
 
