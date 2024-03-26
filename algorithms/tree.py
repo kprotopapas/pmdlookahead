@@ -61,7 +61,6 @@ class PGMCTS(JAlgorithm):
     
 
     # Plays a certain number of episodes to estimate the value function
-    @partial(jax.jit, static_argnums=(0, 2))
     def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, pi: JPolicy):
         traj_key, tree_key = jax.random.split(key)
         indices, actions, rewards = self.sample_trajectory(traj_key, env, params, pi)
