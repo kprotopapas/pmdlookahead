@@ -7,7 +7,7 @@ import time
 import numpy as np
 import wandb
 
-from typing import Callable
+from typing import Callable, List
 
 logging.basicConfig(level=logging.INFO)
 
@@ -106,7 +106,7 @@ class Algorithm(object):
         return info
 
 
-    def reward_to_go(self, rewards: [float]):
+    def reward_to_go(self, rewards: List[float]):
         discounts = np.power(self.gamma, np.arange(len(rewards)))
         discounted = rewards * discounts
         rtg = np.cumsum(discounted[::-1])[::-1] / discounts
