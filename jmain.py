@@ -94,9 +94,9 @@ if __name__ == '__main__':
 
 
     H = size # fixed for deepsea because larger doesn't matter
-    M_f = 10 # deterministic
-    M_t = 10 # deterministic
-    M_l = 8 # Winnicki says we can do one episode
+    M_f = 1 # deterministic
+    M_t = args.simulations # deterministic
+    M_l = 128 # Winnicki says we can do one episode
 
     infos = []
     

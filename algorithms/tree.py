@@ -69,7 +69,7 @@ class PGMCTS(JAlgorithm):
         gradients = []
         for (i, key) in zip(indices, keys):
             obs, state = self.env.inverse(i)
-            output: PolicyOutput = run_mcts(self.env, params, self.depth, self.n_trajectories, self.M_l,
+            output: PolicyOutput = run_mcts(self.env, params, self.depth, self.simulations, self.M_l,
                                             self.env.gamma, key, obs, state, pi)
             tree = output.search_tree
             grad_k = tree.children_rewards[0, 0] + self.env.gamma * tree.children_values[0, 0]

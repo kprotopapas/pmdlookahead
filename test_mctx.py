@@ -17,12 +17,11 @@ import wandb
 args = parse_args()
 group = args.group
 depth = args.d
-N = 50
-M_l = 64
+N = args.simulations
+M_l = 128
 
 
-size = 64
-depth = 2
+size = args.size
 gamma = 0.99
 key = jax.random.PRNGKey(42)
 
@@ -120,6 +119,7 @@ print(f'Without vectorisation would take {duration * alg.horizon} to estimate va
 print()
 
 print(f'Sampling trajectory')
+indices, actions, rewards = alg.sample_trajectory(key, jenv, params, alg.pi)
 start = time.time()
 traj_key, tree_key = jax.random.split(key)
 indices, actions, rewards = alg.sample_trajectory(traj_key, jenv, params, alg.pi)
@@ -140,20 +140,26 @@ end = time.time()
 
 print(f'Should take {end - start} seconds, total {(end - start) * len(indices)} for {len(indices)} states')
 
-alg = PGMCTS(jenv, size, 2, 1, 128, 50)
-self = alg
-traj_key, tree_key = jax.random.split(key)
-indices, actions, rewards = self.sample_trajectory(traj_key, jenv, params, alg.pi)
-
-keys = jax.random.split(tree_key, len(indices))
-gradients = []
-for (i, key) in zip(indices, keys):
-    obs, state = self.env.inverse(i)
-    output: PolicyOutput = run_mcts(self.env, params, self.depth, self.n_trajectories, self.M_l,
-                                    self.env.gamma, key, obs, state, alg.pi)
-    tree = output.search_tree
-    grad_k = tree.children_rewards[0, 0] + self.env.gamma * tree.children_values[0, 0]
-    gradients.append(grad_k)
+alg = PGMCTS(jenv, size, depth, 1, M_l, args.simulations)
 
 
-Q = jnp.zeros_like(self.pi.probas).at[indices].set(gradients)
+alg.sample_trajectory(key, jenv, params, alg.pi)
+
+key, new_key = jax.random.split(key)
+start = time.time()
+traj = alg.sample_trajectory(new_key, jenv, params, alg.pi)
+end = time.time()
+
+print(f'Sample trajectory in {end - start} seconds')
+
+alg.estimate_value(key, jenv, params, alg.pi)
+
+key, new_key = jax.random.split(key)
+start = time.time()
+val = alg.estimate_value(new_key, jenv, params, alg.pi)
+end = time.time()
+
+print(f'Estimate value in {end - start} seconds')
+
+indices, _, _ = traj
+print(len(indices))
