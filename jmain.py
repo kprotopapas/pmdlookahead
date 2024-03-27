@@ -94,15 +94,16 @@ if __name__ == '__main__':
 
 
     H = size # fixed for deepsea because larger doesn't matter
-    M_f = 1 # deterministic
-    M_t = args.simulations # deterministic
-    M_l = 128 # Winnicki says we can do one episode
+    M_f = 8 # deterministic
+    M_t = 10 # determinist  ic
+    M_l = 10 # Winnicki says we can do one episode
 
     infos = []
     
     # TRY WITH LOGISTIC LEARNING RATE
 
     a = lr
+    lr = jnp.inf
     #lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
     #lr = lambda k: 0.1
     #ys = [lr(k) for k in range(epochs)]
