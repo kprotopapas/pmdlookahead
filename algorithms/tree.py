@@ -1,10 +1,10 @@
+from functools import partial
 from gymnax import EnvParams, EnvState
 import mctx
 import jax
 import chex
 import numpy as np
 from scipy.stats import entropy
-from functools import partial
 
 
 from jax import numpy as jnp
@@ -62,21 +62,51 @@ class PGMCTS(JAlgorithm):
 
     # Plays a certain number of episodes to estimate the value function
     def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, pi: JPolicy):
-        traj_key, tree_key = jax.random.split(key)
-        indices, actions, rewards = self.sample_trajectory(traj_key, env, params, pi)
-        
-        keys = jax.random.split(tree_key, len(indices))
-
         Q = jnp.zeros_like(self.pi.probas)
-        for (i, sub_key) in zip(indices, keys):
-            obs, state = env.inverse(i)
-            output: PolicyOutput = run_mcts(env, params, self.depth, self.simulations, self.M_l,
-                                            env.gamma, sub_key, obs, state, pi)
-            tree = output.search_tree
-            grad_k = tree.children_rewards[0, 0] + env.gamma * tree.children_values[0, 0]
-            Q = Q.at[i].add(grad_k)
+        visits = jnp.zeros((Q.shape[0], ))
+
+        #seed = int.from_bytes(os.urandom(2), 'big')
+
+        for k in range(self.n_episodes): # TODO: VMAP!!!!!!!
+            key, reset_key, step_key, action_key, tree_key = jax.random.split(key, 5)
+            obs, state = env.reset(reset_key, params)
         
-        return Q, self.horizon * self.simulations * self.depth * self.M_l
+            actions = []
+            observations = [obs]
+            rewards = []
+
+            done = False
+            while not done: # maybe change to jax.lax.while_loop
+                # maybe change to fixed horizon rollouts for larger games!!!
+                output: PolicyOutput = run_mcts(env,
+                                                params,
+                                                self.depth,
+                                                self.simulations,
+                                                self.M_l,
+                                                env.gamma,
+                                                tree_key,
+                                                obs,
+                                                state,
+                                                self.pi)
+                tree = output.search_tree
+                grad_k = tree.children_rewards[0, 0] + env.gamma * tree.children_values[0, 0]
+
+                ind = env.index(state)
+                Q = Q.at[ind].add(grad_k)
+                visits = visits.at[ind].add(1)
+
+                logits = self.pi.act(ind)
+                action = jax.random.categorical(action_key, logits)
+                obs, state, reward, done, _ = env.step(step_key, state, action, params)
+
+                actions.append(action)
+                observations.append(obs)
+                rewards.append(reward)
+
+
+        Q = Q / np.maximum(visits, 1).reshape(-1, 1)
+            
+        return np.array(Q), self.simulations * self.depth * self.M_l
 
 
     def grad_exact(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, Q: chex.Array, pi: JPolicy):
