@@ -74,6 +74,8 @@ class PGMCTS(JAlgorithm):
             tree = output.search_tree
             grad_k = tree.children_rewards[0, 0] + env.gamma * tree.children_values[0, 0]
             gradients.append(grad_k)
+
+        gradients = jnp.vstack(gradients)
         
         
         Q = jnp.zeros_like(self.pi.probas).at[indices].set(gradients)
