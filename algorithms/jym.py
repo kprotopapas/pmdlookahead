@@ -65,6 +65,7 @@ class JAlgorithm(object):
         V = jnp.sum(self.pi.probas * Q, axis=1)
         old = jnp.dot(env.mu, V_opt - V)
 
+        runtime = 0
         for k in range(epochs):
             key = jax.random.PRNGKey(seed * k)
             start = time.time()
@@ -95,6 +96,9 @@ class JAlgorithm(object):
                 metrics['samples'] = int(self.samples)
 
             duration = time.time() - start
+            runtime += duration
+            metrics['runtime'] = runtime
+            metrics['duration'] = duration
             info.append(metrics)
 
             improvement = old - sub
