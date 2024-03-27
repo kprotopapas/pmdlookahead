@@ -96,10 +96,9 @@ class JAlgorithm(object):
                 metrics['samples'] = int(self.samples)
 
             duration = time.time() - start
-            metrics['duration'] = duration
-
             runtime += duration
             metrics['runtime'] = runtime
+            metrics['duration'] = duration
             info.append(metrics)
 
             improvement = old - sub
