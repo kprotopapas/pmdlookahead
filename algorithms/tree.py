@@ -55,7 +55,7 @@ class PGMCTS(JAlgorithm):
         nkey, nobs, nstate, done = carry
         indices, actions, rewards = ys
         index = env.index(nstate)
-        indices = jnp.insert(indices, -1, index)
+        indices = jnp.append(indices, index)
         return indices, actions, rewards
     
     
@@ -64,15 +64,15 @@ class PGMCTS(JAlgorithm):
     def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, pi: JPolicy):
         traj_key, tree_key = jax.random.split(key)
         indices, actions, rewards = self.sample_trajectory(traj_key, env, params, pi)
-
+        
         keys = jax.random.split(tree_key, len(indices))
         gradients = []
-        for (i, key) in zip(indices, keys):
-            obs, state = self.env.inverse(i)
-            output: PolicyOutput = run_mcts(self.env, params, self.depth, self.simulations, self.M_l,
-                                            self.env.gamma, key, obs, state, pi)
+        for (i, sub_key) in zip(indices, keys):
+            obs, state = env.inverse(i)
+            output: PolicyOutput = run_mcts(env, params, self.depth, self.simulations, self.M_l,
+                                            env.gamma, sub_key, obs, state, pi)
             tree = output.search_tree
-            grad_k = tree.children_rewards[0, 0] + self.env.gamma * tree.children_values[0, 0]
+            grad_k = tree.children_rewards[0, 0] + env.gamma * tree.children_values[0, 0]
             gradients.append(grad_k)
         
         
