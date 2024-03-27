@@ -66,19 +66,16 @@ class PGMCTS(JAlgorithm):
         indices, actions, rewards = self.sample_trajectory(traj_key, env, params, pi)
         
         keys = jax.random.split(tree_key, len(indices))
-        gradients = []
+
+        Q = jnp.zeros_like(self.pi.probas)
         for (i, sub_key) in zip(indices, keys):
             obs, state = env.inverse(i)
             output: PolicyOutput = run_mcts(env, params, self.depth, self.simulations, self.M_l,
                                             env.gamma, sub_key, obs, state, pi)
             tree = output.search_tree
             grad_k = tree.children_rewards[0, 0] + env.gamma * tree.children_values[0, 0]
-            gradients.append(grad_k)
-
-        gradients = jnp.vstack(gradients)
+            Q = Q.at[i].add(grad_k)
         
-        
-        Q = jnp.zeros_like(self.pi.probas).at[indices].set(gradients)
         return Q, self.horizon * self.simulations * self.depth * self.M_l
 
 
