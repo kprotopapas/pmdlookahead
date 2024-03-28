@@ -103,7 +103,6 @@ if __name__ == '__main__':
     # TRY WITH LOGISTIC LEARNING RATE
 
     a = lr
-    lr = jnp.inf
     #lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
     #lr = lambda k: 0.1
     #ys = [lr(k) for k in range(epochs)]
