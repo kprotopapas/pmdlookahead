@@ -1,0 +1,1 @@
+{"suboptimality": 0.5271965861320496, "divergence": 0.0, "learning_rate": 1.0, "epoch": 199, "grad_error": 0.9998437762260437, "samples": 163840000, "duration": 0.5878610610961914, "runtime": 129.5433120727539, "_timestamp": 1711480082.1486278, "_runtime": 134.44849181175232, "_step": 199, "_wandb": {"runtime": 134}}

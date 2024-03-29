@@ -1,0 +1,182 @@
+2024-01-19 03:37:59,952 INFO    StreamThr :297928 [internal.py:wandb_internal():86] W&B internal server running at pid: 297928, started at: 2024-01-19 03:37:59.950917
+2024-01-19 03:37:59,965 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: status
+2024-01-19 03:37:59,978 INFO    WriterThread:297928 [datastore.py:open_for_write():85] open: /home/komodo/Documents/uni/rl/project/wandb/offline-run-20240119_033759-lqqirygs/run-lqqirygs.wandb
+2024-01-19 03:38:00,047 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: run_start
+2024-01-19 03:38:00,048 DEBUG   HandlerThread:297928 [system_info.py:__init__():32] System info init
+2024-01-19 03:38:00,048 DEBUG   HandlerThread:297928 [system_info.py:__init__():47] System info init done
+2024-01-19 03:38:00,049 INFO    HandlerThread:297928 [system_monitor.py:start():194] Starting system monitor
+2024-01-19 03:38:00,049 INFO    HandlerThread:297928 [system_monitor.py:probe():214] Collecting system info
+2024-01-19 03:38:00,050 INFO    SystemMonitor:297928 [system_monitor.py:_start():158] Starting system asset monitoring threads
+2024-01-19 03:38:00,052 INFO    SystemMonitor:297928 [interfaces.py:start():190] Started cpu monitoring
+2024-01-19 03:38:00,055 INFO    SystemMonitor:297928 [interfaces.py:start():190] Started disk monitoring
+2024-01-19 03:38:00,057 INFO    SystemMonitor:297928 [interfaces.py:start():190] Started memory monitoring
+2024-01-19 03:38:00,059 INFO    SystemMonitor:297928 [interfaces.py:start():190] Started network monitoring
+2024-01-19 03:38:00,073 DEBUG   HandlerThread:297928 [system_info.py:probe():196] Probing system
+2024-01-19 03:38:00,076 DEBUG   HandlerThread:297928 [system_info.py:_probe_git():181] Probing git
+2024-01-19 03:38:00,086 DEBUG   HandlerThread:297928 [system_info.py:_probe_git():189] Probing git done
+2024-01-19 03:38:00,086 DEBUG   HandlerThread:297928 [system_info.py:probe():244] Probing system done
+2024-01-19 03:38:00,087 DEBUG   HandlerThread:297928 [system_monitor.py:probe():223] {'os': 'Linux-6.2.0-39-generic-x86_64-with-glibc2.35', 'python': '3.10.13', 'heartbeatAt': '2024-01-19T02:38:00.073268', 'startedAt': '2024-01-19T02:37:59.855295', 'docker': None, 'cuda': None, 'args': ('--alg', 'DPQA', '-d', '1', '-n', '1', '--epochs', '2048', '-s', '8', '-t', '100', '--group', 'delete', '--wandb', '--lr', '1', '--simulations', '50', '--seed', '42'), 'state': 'running', 'program': '/home/komodo/Documents/uni/rl/project/jmain.py', 'codePathLocal': 'jmain.py', 'codePath': 'jmain.py', 'git': {'remote': 'git@gitlab.com:kimon.protopapa/rl-project.git', 'commit': '0f097b6fab6e9893007fcd4c32dd96edae1d9b37'}, 'email': 'kimon.protopapas@gmail.com', 'root': '/home/komodo/Documents/uni/rl/project', 'host': 'komodobook', 'username': 'komodo', 'executable': '/home/komodo/miniconda3/envs/rljax/bin/python', 'cpu_count': 2, 'cpu_count_logical': 4, 'cpu_freq': {'current': 3.1997500000000003, 'min': 400.0, 'max': 3500.0}, 'cpu_freq_per_core': [{'current': 3.2, 'min': 400.0, 'max': 3500.0}, {'current': 3.2, 'min': 400.0, 'max': 3500.0}, {'current': 3.2, 'min': 400.0, 'max': 3500.0}, {'current': 3.2, 'min': 400.0, 'max': 3500.0}], 'disk': {'/': {'total': 233.17998886108398, 'used': 131.9469757080078}}, 'memory': {'total': 7.625484466552734}}
+2024-01-19 03:38:00,087 INFO    HandlerThread:297928 [system_monitor.py:probe():224] Finished collecting system info
+2024-01-19 03:38:00,087 INFO    HandlerThread:297928 [system_monitor.py:probe():227] Publishing system info
+2024-01-19 03:38:00,087 DEBUG   HandlerThread:297928 [system_info.py:_save_pip():52] Saving list of pip packages installed into the current environment
+2024-01-19 03:38:00,087 DEBUG   HandlerThread:297928 [system_info.py:_save_pip():68] Saving pip packages done
+2024-01-19 03:38:00,088 DEBUG   HandlerThread:297928 [system_info.py:_save_conda():75] Saving list of conda packages installed into the current environment
+2024-01-19 03:38:03,095 DEBUG   HandlerThread:297928 [system_info.py:_save_conda():87] Saving conda packages done
+2024-01-19 03:38:03,096 INFO    HandlerThread:297928 [system_monitor.py:probe():229] Finished publishing system info
+2024-01-19 03:38:04,965 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: status_report
+2024-01-19 03:38:04,966 DEBUG   SenderThread:297928 [sender.py:send_request():407] send_request: status_report
+2024-01-19 03:38:06,138 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,165 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,200 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,236 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,300 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,342 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,392 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,442 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,488 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,528 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,572 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,608 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,642 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,676 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,711 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,743 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,779 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,813 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,843 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,872 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,907 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,941 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:06,979 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,017 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,047 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,076 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,126 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,171 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,215 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,260 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,303 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,348 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,388 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,426 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,463 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,491 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,524 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,564 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,593 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,625 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,659 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,695 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,725 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,753 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,788 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,821 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,853 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,887 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,918 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,954 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:07,982 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,013 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,046 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,081 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,117 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,153 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,180 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,212 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,244 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,275 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,308 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,340 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,374 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,407 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,439 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,471 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,502 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,537 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,571 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,604 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,637 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,669 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,693 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,744 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,790 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,841 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,889 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,934 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:08,977 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,019 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,047 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,083 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,117 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,154 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,180 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,212 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,242 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,273 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,303 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,335 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,365 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,396 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,429 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,463 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,495 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,527 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,559 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,593 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,631 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,660 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,697 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,735 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,768 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,798 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,835 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,868 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,903 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,933 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:09,967 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: status_report
+2024-01-19 03:38:09,968 DEBUG   SenderThread:297928 [sender.py:send_request():407] send_request: status_report
+2024-01-19 03:38:09,968 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,006 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,039 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,074 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,107 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,144 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,178 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,216 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,252 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,286 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,335 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,390 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,437 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,484 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,531 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,578 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,628 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,676 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,714 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,753 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,791 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,832 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,865 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,900 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,931 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:10,964 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,003 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,046 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,083 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,123 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,154 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,188 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,226 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,253 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,289 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,328 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,378 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,423 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,457 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,491 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,529 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,566 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,606 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,637 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-19 03:38:11,674 DEBUG   HandlerThread:297928 [handler.py:handle_request():146] handle_request: partial_history

@@ -1,0 +1,54 @@
+wandb_version: 1
+
+learning_rate:
+  desc: null
+  value: 1.0
+epochs:
+  desc: null
+  value: 200
+exact:
+  desc: null
+  value: false
+algorithm:
+  desc: null
+  value: 5-PQA
+environment:
+  desc: null
+  value:
+    name: Deepsea-v2-16
+    gamma: 0.9921875
+horizon:
+  desc: null
+  value: 256
+n_trajectories:
+  desc: null
+  value: 512
+n_tree:
+  desc: null
+  value: 50
+n_final:
+  desc: null
+  value: 256
+_wandb:
+  desc: null
+  value:
+    python_version: 3.10.13
+    cli_version: 0.15.12
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1705013408.314783
+    t:
+      1:
+      - 12
+      - 55
+      2:
+      - 12
+      - 55
+      3:
+      - 16
+      - 23
+      4: 3.10.13
+      5: 0.15.12
+      8:
+      - 5
+      13: linux-x86_64

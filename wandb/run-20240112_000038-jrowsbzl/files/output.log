@@ -1,0 +1,11 @@
+INFO:root:Epoch: 0, suboptimality: 0.861757, in time: 0.467925, improvement: 0.000004
+INFO:root:Epoch: 1, suboptimality: 0.861626, in time: 0.476063, improvement: 0.000131
+INFO:root:Epoch: 2, suboptimality: 0.860964, in time: 0.509910, improvement: 0.000662
+INFO:root:Epoch: 3, suboptimality: 0.849589, in time: 0.464998, improvement: 0.011375
+INFO:root:Epoch: 4, suboptimality: 0.484698, in time: 0.460348, improvement: 0.364892
+INFO:root:Epoch: 5, suboptimality: 0.000000, in time: 0.441795, improvement: 0.484698
+INFO:root:Epoch: 6, suboptimality: 0.000000, in time: 0.425686, improvement: 0.000000
+INFO:root:Epoch: 7, suboptimality: 0.000000, in time: 0.483862, improvement: 0.000000
+INFO:root:Epoch: 8, suboptimality: 0.000000, in time: 0.463166, improvement: 0.000000
+INFO:root:Epoch: 9, suboptimality: 0.000000, in time: 0.454389, improvement: 0.000000
+INFO:root:Epoch: 10, suboptimality: 0.000000, in time: 0.465991, improvement: 0.000000

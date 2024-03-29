@@ -1,0 +1,65 @@
+wandb_version: 1
+
+learning_rate:
+  desc: null
+  value: 1.0
+epochs:
+  desc: null
+  value: 200
+exact:
+  desc: null
+  value: false
+algorithm:
+  desc: null
+  value: 3-PGMCTS
+environment:
+  desc: null
+  value:
+    name: DeepSea-Wrapper
+    gamma: 0.99
+horizon:
+  desc: null
+  value: 64
+trajectories:
+  desc: null
+  value: 1
+simulations:
+  desc: null
+  value: 50
+depth:
+  desc: null
+  value: 3
+episodes:
+  desc: null
+  value: 1
+rollouts:
+  desc: null
+  value: 128
+_wandb:
+  desc: null
+  value:
+    python_version: 3.10.13
+    cli_version: 0.15.12
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1706118760.943511
+    t:
+      1:
+      - 12
+      - 45
+      - 55
+      2:
+      - 12
+      - 45
+      - 55
+      3:
+      - 2
+      - 4
+      - 16
+      - 23
+      - 42
+      4: 3.10.13
+      5: 0.15.12
+      8:
+      - 5
+      13: linux-x86_64

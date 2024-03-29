@@ -1,0 +1,45 @@
+2024-03-24 23:09:25,573 INFO    StreamThr :70947 [internal.py:wandb_internal():86] W&B internal server running at pid: 70947, started at: 2024-03-24 23:09:25.572043
+2024-03-24 23:09:25,582 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: status
+2024-03-24 23:09:25,598 INFO    WriterThread:70947 [datastore.py:open_for_write():85] open: /home/komodo/Documents/uni/rl/project/wandb/offline-run-20240324_230925-s6q7v86m/run-s6q7v86m.wandb
+2024-03-24 23:09:25,673 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: run_start
+2024-03-24 23:09:25,676 DEBUG   HandlerThread:70947 [system_info.py:__init__():32] System info init
+2024-03-24 23:09:25,677 DEBUG   HandlerThread:70947 [system_info.py:__init__():47] System info init done
+2024-03-24 23:09:25,677 INFO    HandlerThread:70947 [system_monitor.py:start():194] Starting system monitor
+2024-03-24 23:09:25,678 INFO    SystemMonitor:70947 [system_monitor.py:_start():158] Starting system asset monitoring threads
+2024-03-24 23:09:25,680 INFO    HandlerThread:70947 [system_monitor.py:probe():214] Collecting system info
+2024-03-24 23:09:25,682 INFO    SystemMonitor:70947 [interfaces.py:start():190] Started cpu monitoring
+2024-03-24 23:09:25,684 INFO    SystemMonitor:70947 [interfaces.py:start():190] Started disk monitoring
+2024-03-24 23:09:25,687 INFO    SystemMonitor:70947 [interfaces.py:start():190] Started memory monitoring
+2024-03-24 23:09:25,695 INFO    SystemMonitor:70947 [interfaces.py:start():190] Started network monitoring
+2024-03-24 23:09:25,709 DEBUG   HandlerThread:70947 [system_info.py:probe():196] Probing system
+2024-03-24 23:09:25,712 DEBUG   HandlerThread:70947 [system_info.py:_probe_git():181] Probing git
+2024-03-24 23:09:25,725 DEBUG   HandlerThread:70947 [system_info.py:_probe_git():189] Probing git done
+2024-03-24 23:09:25,726 DEBUG   HandlerThread:70947 [system_info.py:probe():244] Probing system done
+2024-03-24 23:09:25,726 DEBUG   HandlerThread:70947 [system_monitor.py:probe():223] {'os': 'Linux-6.5.0-18-generic-x86_64-with-glibc2.35', 'python': '3.10.13', 'heartbeatAt': '2024-03-24T22:09:25.709180', 'startedAt': '2024-03-24T22:09:25.536936', 'docker': None, 'cuda': None, 'args': ('--alg', 'PGMCTS', '-d', '3', '-n', '1', '--epochs', '100', '-s', '32', '-t', '100', '--group', 'delete', '--wandb', '--lr', '1', '--simulations', '50', '--seed', '42'), 'state': 'running', 'program': '/home/komodo/Documents/uni/rl/project/jmain.py', 'codePathLocal': 'jmain.py', 'codePath': 'jmain.py', 'git': {'remote': 'git@gitlab.com:kimon.protopapa/rl-project.git', 'commit': '4f9afe78836e03185ef214fa098acbf3cf66c7fb'}, 'email': 'kimon.protopapas@gmail.com', 'root': '/home/komodo/Documents/uni/rl/project', 'host': 'komodobook', 'username': 'komodo', 'executable': '/home/komodo/miniconda3/envs/rljax/bin/python', 'cpu_count': 2, 'cpu_count_logical': 4, 'cpu_freq': {'current': 2.39925, 'min': 400.0, 'max': 3500.0}, 'cpu_freq_per_core': [{'current': 2.4, 'min': 400.0, 'max': 3500.0}, {'current': 2.401, 'min': 400.0, 'max': 3500.0}, {'current': 2.408, 'min': 400.0, 'max': 3500.0}, {'current': 2.413, 'min': 400.0, 'max': 3500.0}], 'disk': {'/': {'total': 233.17998886108398, 'used': 163.14631271362305}}, 'memory': {'total': 7.625064849853516}}
+2024-03-24 23:09:25,726 INFO    HandlerThread:70947 [system_monitor.py:probe():224] Finished collecting system info
+2024-03-24 23:09:25,726 INFO    HandlerThread:70947 [system_monitor.py:probe():227] Publishing system info
+2024-03-24 23:09:25,726 DEBUG   HandlerThread:70947 [system_info.py:_save_pip():52] Saving list of pip packages installed into the current environment
+2024-03-24 23:09:25,728 DEBUG   HandlerThread:70947 [system_info.py:_save_pip():68] Saving pip packages done
+2024-03-24 23:09:25,728 DEBUG   HandlerThread:70947 [system_info.py:_save_conda():75] Saving list of conda packages installed into the current environment
+2024-03-24 23:09:29,119 DEBUG   HandlerThread:70947 [system_info.py:_save_conda():87] Saving conda packages done
+2024-03-24 23:09:29,120 INFO    HandlerThread:70947 [system_monitor.py:probe():229] Finished publishing system info
+2024-03-24 23:09:30,590 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: status_report
+2024-03-24 23:09:30,591 DEBUG   SenderThread:70947 [sender.py:send_request():407] send_request: status_report
+2024-03-24 23:09:35,592 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: status_report
+2024-03-24 23:09:35,593 DEBUG   SenderThread:70947 [sender.py:send_request():407] send_request: status_report
+2024-03-24 23:09:40,594 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: status_report
+2024-03-24 23:09:40,594 DEBUG   SenderThread:70947 [sender.py:send_request():407] send_request: status_report
+2024-03-24 23:09:45,595 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: status_report
+2024-03-24 23:09:45,596 DEBUG   SenderThread:70947 [sender.py:send_request():407] send_request: status_report
+2024-03-24 23:09:50,597 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: status_report
+2024-03-24 23:09:50,597 DEBUG   SenderThread:70947 [sender.py:send_request():407] send_request: status_report
+2024-03-24 23:09:53,245 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: partial_history
+2024-03-24 23:09:55,353 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: partial_history
+2024-03-24 23:09:55,598 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: status_report
+2024-03-24 23:09:55,599 DEBUG   SenderThread:70947 [sender.py:send_request():407] send_request: status_report
+2024-03-24 23:09:57,413 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: partial_history
+2024-03-24 23:09:59,463 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: partial_history
+2024-03-24 23:10:00,605 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: status_report
+2024-03-24 23:10:00,606 DEBUG   SenderThread:70947 [sender.py:send_request():407] send_request: status_report
+2024-03-24 23:10:01,461 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: partial_history
+2024-03-24 23:10:03,710 DEBUG   HandlerThread:70947 [handler.py:handle_request():146] handle_request: partial_history

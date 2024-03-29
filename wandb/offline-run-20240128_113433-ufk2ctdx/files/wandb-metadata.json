@@ -1,0 +1,82 @@
+{
+    "os": "Linux-6.5.0-14-generic-x86_64-with-glibc2.35",
+    "python": "3.10.13",
+    "heartbeatAt": "2024-01-28T10:34:33.934096",
+    "startedAt": "2024-01-28T10:34:33.778601",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "--alg",
+        "DPQA",
+        "-d",
+        "5",
+        "-n",
+        "1",
+        "--epochs",
+        "100",
+        "-s",
+        "64",
+        "-t",
+        "100",
+        "--group",
+        "delete",
+        "--wandb",
+        "--lr",
+        "1",
+        "--simulations",
+        "50",
+        "--seed",
+        "42"
+    ],
+    "state": "running",
+    "program": "/home/komodo/Documents/uni/rl/project/jmain.py",
+    "codePathLocal": "jmain.py",
+    "codePath": "jmain.py",
+    "git": {
+        "remote": "git@gitlab.com:kimon.protopapa/rl-project.git",
+        "commit": "e1ec844f6a74d915cc7b4061433480d58974465e"
+    },
+    "email": "kimon.protopapas@gmail.com",
+    "root": "/home/komodo/Documents/uni/rl/project",
+    "host": "komodobook",
+    "username": "komodo",
+    "executable": "/home/komodo/miniconda3/envs/rljax/bin/python",
+    "cpu_count": 2,
+    "cpu_count_logical": 4,
+    "cpu_freq": {
+        "current": 1.7995,
+        "min": 400.0,
+        "max": 3500.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 1.8,
+            "min": 400.0,
+            "max": 3500.0
+        },
+        {
+            "current": 1.8,
+            "min": 400.0,
+            "max": 3500.0
+        },
+        {
+            "current": 1.799,
+            "min": 400.0,
+            "max": 3500.0
+        },
+        {
+            "current": 1.799,
+            "min": 400.0,
+            "max": 3500.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 233.17998886108398,
+            "used": 154.39860153198242
+        }
+    },
+    "memory": {
+        "total": 7.625064849853516
+    }
+}

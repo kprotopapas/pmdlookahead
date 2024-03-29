@@ -1,0 +1,27 @@
+2024-01-19 02:32:35,981 INFO    StreamThr :289736 [internal.py:wandb_internal():86] W&B internal server running at pid: 289736, started at: 2024-01-19 02:32:35.979768
+2024-01-19 02:32:35,989 DEBUG   HandlerThread:289736 [handler.py:handle_request():146] handle_request: status
+2024-01-19 02:32:36,000 INFO    WriterThread:289736 [datastore.py:open_for_write():85] open: /home/komodo/Documents/uni/rl/project/wandb/offline-run-20240119_023235-76w7iw1y/run-76w7iw1y.wandb
+2024-01-19 02:32:36,067 DEBUG   HandlerThread:289736 [handler.py:handle_request():146] handle_request: run_start
+2024-01-19 02:32:36,071 DEBUG   HandlerThread:289736 [system_info.py:__init__():32] System info init
+2024-01-19 02:32:36,071 DEBUG   HandlerThread:289736 [system_info.py:__init__():47] System info init done
+2024-01-19 02:32:36,072 INFO    HandlerThread:289736 [system_monitor.py:start():194] Starting system monitor
+2024-01-19 02:32:36,074 INFO    SystemMonitor:289736 [system_monitor.py:_start():158] Starting system asset monitoring threads
+2024-01-19 02:32:36,075 INFO    HandlerThread:289736 [system_monitor.py:probe():214] Collecting system info
+2024-01-19 02:32:36,078 INFO    SystemMonitor:289736 [interfaces.py:start():190] Started cpu monitoring
+2024-01-19 02:32:36,087 INFO    SystemMonitor:289736 [interfaces.py:start():190] Started disk monitoring
+2024-01-19 02:32:36,096 INFO    SystemMonitor:289736 [interfaces.py:start():190] Started memory monitoring
+2024-01-19 02:32:36,103 INFO    SystemMonitor:289736 [interfaces.py:start():190] Started network monitoring
+2024-01-19 02:32:36,119 DEBUG   HandlerThread:289736 [system_info.py:probe():196] Probing system
+2024-01-19 02:32:36,123 DEBUG   HandlerThread:289736 [system_info.py:_probe_git():181] Probing git
+2024-01-19 02:32:36,135 DEBUG   HandlerThread:289736 [system_info.py:_probe_git():189] Probing git done
+2024-01-19 02:32:36,135 DEBUG   HandlerThread:289736 [system_info.py:probe():244] Probing system done
+2024-01-19 02:32:36,135 DEBUG   HandlerThread:289736 [system_monitor.py:probe():223] {'os': 'Linux-6.2.0-39-generic-x86_64-with-glibc2.35', 'python': '3.10.13', 'heartbeatAt': '2024-01-19T01:32:36.119609', 'startedAt': '2024-01-19T01:32:35.883443', 'docker': None, 'cuda': None, 'args': ('--alg', 'DPQA', '-d', '1', '-n', '1', '--epochs', '2048', '-s', '8', '-t', '100', '--group', 'delete', '--wandb', '--lr', '1', '--simulations', '50', '--seed', '42'), 'state': 'running', 'program': '/home/komodo/Documents/uni/rl/project/jmain.py', 'codePathLocal': 'jmain.py', 'codePath': 'jmain.py', 'git': {'remote': 'git@gitlab.com:kimon.protopapa/rl-project.git', 'commit': '0f097b6fab6e9893007fcd4c32dd96edae1d9b37'}, 'email': 'kimon.protopapas@gmail.com', 'root': '/home/komodo/Documents/uni/rl/project', 'host': 'komodobook', 'username': 'komodo', 'executable': '/home/komodo/miniconda3/envs/rljax/bin/python', 'cpu_count': 2, 'cpu_count_logical': 4, 'cpu_freq': {'current': 1.5605, 'min': 400.0, 'max': 3500.0}, 'cpu_freq_per_core': [{'current': 2.002, 'min': 400.0, 'max': 3500.0}, {'current': 2.119, 'min': 400.0, 'max': 3500.0}, {'current': 2.144, 'min': 400.0, 'max': 3500.0}, {'current': 2.404, 'min': 400.0, 'max': 3500.0}], 'disk': {'/': {'total': 233.17998886108398, 'used': 131.91668319702148}}, 'memory': {'total': 7.625484466552734}}
+2024-01-19 02:32:36,136 INFO    HandlerThread:289736 [system_monitor.py:probe():224] Finished collecting system info
+2024-01-19 02:32:36,136 INFO    HandlerThread:289736 [system_monitor.py:probe():227] Publishing system info
+2024-01-19 02:32:36,136 DEBUG   HandlerThread:289736 [system_info.py:_save_pip():52] Saving list of pip packages installed into the current environment
+2024-01-19 02:32:36,136 DEBUG   HandlerThread:289736 [system_info.py:_save_pip():68] Saving pip packages done
+2024-01-19 02:32:36,137 DEBUG   HandlerThread:289736 [system_info.py:_save_conda():75] Saving list of conda packages installed into the current environment
+2024-01-19 02:32:39,117 DEBUG   HandlerThread:289736 [system_info.py:_save_conda():87] Saving conda packages done
+2024-01-19 02:32:39,119 INFO    HandlerThread:289736 [system_monitor.py:probe():229] Finished publishing system info
+2024-01-19 02:32:40,996 DEBUG   HandlerThread:289736 [handler.py:handle_request():146] handle_request: status_report
+2024-01-19 02:32:40,997 DEBUG   SenderThread:289736 [sender.py:send_request():407] send_request: status_report
