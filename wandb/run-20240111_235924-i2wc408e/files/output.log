@@ -1,8 +1,0 @@
-
-INFO:root:Epoch: 0, suboptimality: 0.861757, in time: 3.072767, improvement: 0.000004
-INFO:root:Epoch: 1, suboptimality: 0.861633, in time: 3.095915, improvement: 0.000124
-INFO:root:Epoch: 2, suboptimality: 0.861268, in time: 2.952129, improvement: 0.000366
-INFO:root:Epoch: 3, suboptimality: 0.856962, in time: 3.032797, improvement: 0.004306
-INFO:root:Epoch: 4, suboptimality: 0.765474, in time: 3.055419, improvement: 0.091488
-INFO:root:Epoch: 5, suboptimality: 0.184162, in time: 3.042634, improvement: 0.581312
-INFO:root:Epoch: 6, suboptimality: 0.000000, in time: 2.909898, improvement: 0.184162

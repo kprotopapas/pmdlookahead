@@ -1,1 +1,0 @@
-{"epoch": 11, "suboptimality": 0.0, "learning_rate": 2.5615428329840504, "pi_entropy": 0.5633971052223642, "divergence": 0.9994286140737955, "normalized_grad_error": 0.010410895302709838, "samples": 53952, "_timestamp": 1705014097.0087762, "_runtime": 9.865082263946533, "_step": 11}

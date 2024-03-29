@@ -1,1 +1,0 @@
-{"suboptimality": 0.8537074327468872, "epoch": 2047, "divergence": 5.902958103587057e+20, "learning_rate": Infinity, "right_probability": 0.26923078298568726, "grad_error": 1.0751215498192377e+27, "diff_greedy": 12, "_timestamp": 1705628012.1145666, "_runtime": 37.58553457260132, "_step": 2047, "_wandb": {"runtime": 37}}
