@@ -79,8 +79,6 @@ if __name__ == '__main__':
 
     infos = []
     
-    # TRY WITH LOGISTIC LEARNING RATE
-
     a = lr
     #lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
     #ys = [lr(k) for k in range(epochs)]
