@@ -25,7 +25,7 @@ class EnvParams:
     deterministic: jnp.bool_
 
 
-# Custom Gridworld environment with P, R, µ matrices and without state resets at the end of episode
+
 class Gridworld(JTabular):
     def __init__(self, gamma: float, rows: int = 10, columns: int = 5,
                  deterministic: bool = True, seed: int = 42):
@@ -89,7 +89,7 @@ class Gridworld(JTabular):
         self.print_name = f'{name}-{rows}x{columns}-{gamma}{det}'
 
 
-    # action: [0, 1, 2, 3] -> [DOWN, LEFT, UP, RIGHT]
+    
     @partial(jax.jit, static_argnums=(0, ))
     def step(self, key: chex.PRNGKey, state: EnvState, action: int, params: EnvParams):
         action = jnp.clip(action, 0, 3)
@@ -158,7 +158,7 @@ class Gridworld(JTabular):
 
     @partial(jax.jit, static_argnums=(0,))    
     def index(self, state: EnvState) -> int:
-        return state.pos_x + state.pos_y * self.columns # number in base (columns)
+        return state.pos_x + state.pos_y * self.columns 
     
 
     @property

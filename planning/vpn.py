@@ -7,25 +7,25 @@ class VPN(torch.nn.Module):
         self.depth = depth
         hidden = min(max(16, d_z // 2), d_z)
 
-        self.mu = Embedding(n_z, d_z) # s -> z, for now one to one embedding
+        self.mu = Embedding(n_z, d_z) 
 
-        # shared weights
+        
         self.latent = Sequential(Linear(d_z + 1, hidden, bias=False), ReLU(),
                                  Linear(hidden, hidden, bias=False), ReLU())
         
         self.latent2 = Sequential(Linear(d_z + 1, hidden, bias=False), ReLU(),
                                  Linear(hidden, hidden, bias=False), ReLU())
         
-         # (z, a) -> zp
+         
         self.gt = Sequential(self.latent,
                              Linear(hidden, d_z))
         
-        # (z, a) -> r
+        
         self.rt = Sequential(self.latent,
                              Linear(hidden, 1))
         
 
-        # z -> v
+        
         self.vt = Sequential(Linear(d_z, hidden, bias=False), ReLU(),
                              Linear(hidden, hidden, bias=False), ReLU(),
                              Linear(hidden, 1))

@@ -60,14 +60,14 @@ class PGMCTS(JAlgorithm):
     
     
 
-    # Plays a certain number of episodes to estimate the value function
+    
     def estimate_value(self, key: chex.PRNGKey, env: JTabular, params: EnvParams, pi: JPolicy):
         Q = jnp.zeros_like(self.pi.probas)
         visits = jnp.zeros((Q.shape[0], ))
 
-        #seed = int.from_bytes(os.urandom(2), 'big')
+        
 
-        for k in range(self.n_episodes): # TODO: VMAP!!!!!!!
+        for k in range(self.n_episodes): 
             key, reset_key, step_key, action_key, tree_key = jax.random.split(key, 5)
             obs, state = env.reset(reset_key, params)
         
@@ -76,8 +76,8 @@ class PGMCTS(JAlgorithm):
             rewards = []
 
             done = False
-            while not done: # maybe change to jax.lax.while_loop
-                # maybe change to fixed horizon rollouts for larger games!!!
+            while not done: 
+                
                 output: PolicyOutput = run_mcts(env,
                                                 params,
                                                 self.depth,
@@ -121,7 +121,7 @@ class PGMCTS(JAlgorithm):
         pk = self.pi.probas
 
         dk = self.divergence(greedy, pk)
-        if dk == 0: # CONVERGED! V* = TV*
+        if dk == 0: 
             return 0, 0
 
         lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.depth)
@@ -130,5 +130,5 @@ class PGMCTS(JAlgorithm):
         return lrk, dk
     
 
-    def divergence(self, u, v): # KL-divergence
+    def divergence(self, u, v): 
         return np.max(entropy(u, v, axis=1))

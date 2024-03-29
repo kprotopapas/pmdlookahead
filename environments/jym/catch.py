@@ -9,13 +9,13 @@ from gymnax.environments.bsuite.catch import EnvParams, EnvState
 from environments.jym import JTabular
 
 
-# Wrapper for the Catch environment with explicit P, R, µ matrices and without state resets at the end of episode
+
 class Catch(JTabular):
     def __init__(self, gamma: float, rows: int = 10, columns: int = 5):
         env, params = gymnax.make('Catch-bsuite', rows=rows, columns=columns)
         self.env = env
         self.params = params
-        num_states = columns * columns * rows # terminal states are where paddle is on last row, can recycle them
+        num_states = columns * columns * rows 
         
         
         def step_state(s, a):

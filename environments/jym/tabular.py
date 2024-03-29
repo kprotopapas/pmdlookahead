@@ -107,7 +107,7 @@ class JTabular(Environment):
 
         return Q_new
     
-    # Bellman maximisation operator (VI operator)
+    
     @partial(jax.jit, static_argnums=(0,))
     def bellman(self, V):
         next_V = jnp.sum(self.P * V[..., jnp.newaxis, jnp.newaxis], axis=0)

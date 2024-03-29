@@ -9,7 +9,7 @@ from gymnax.environments.bsuite.deep_sea import EnvParams, EnvState
 from environments.jym import JTabular
 
 
-# Wrapper for the DeepSea environment with explicit P, R, µ matrices and without state resets at the end of episode
+
 class DeepSea(JTabular):
     def __init__(self, size: int, gamma: float, deterministic: bool = True):
         env, params = gymnax.make('DeepSea-bsuite', size=size)
@@ -23,8 +23,8 @@ class DeepSea(JTabular):
         num_states = self.size * (self.size + 1) // 2 + 1
 
         def step(s, a):
-            # nondeterministic transition: left -> left, right -> 1 / size * left + (1 - 1 / size) * right
-            row = jnp.floor((jnp.sqrt(8 * s + 1) - 1) / 2).astype(jnp.int32) # returns closest triangle root
+            
+            row = jnp.floor((jnp.sqrt(8 * s + 1) - 1) / 2).astype(jnp.int32) 
             tri = row * (row + 1) // 2
             col = s - tri
 
@@ -82,7 +82,7 @@ class DeepSea(JTabular):
     
     @partial(jax.jit, static_argnums=(0,))
     def inverse(self, state_ind: int) -> tuple[chex.Array, EnvState]:
-        row = jnp.floor((jnp.sqrt(8 * state_ind + 1) - 1) / 2).astype(jnp.int32) # returns closest triangle root
+        row = jnp.floor((jnp.sqrt(8 * state_ind + 1) - 1) / 2).astype(jnp.int32) 
         tri = row * (row + 1) // 2
         col = jax.lax.select(row >= self.size, 0, state_ind - tri)
 

@@ -71,7 +71,7 @@ class Algorithm(object):
 
             g_norm = gradient - gradient.mean(axis=1)[..., np.newaxis]
             err = gradient - grad_exact
-            err = err - err.mean(axis=1)[..., np.newaxis] # for simplex or exp update mean doesn't matter
+            err = err - err.mean(axis=1)[..., np.newaxis] 
 
             pi_entropy = np.mean(entropy(self.pi.probas, axis=1))
             out_log = {'epoch': k,
@@ -189,14 +189,14 @@ class PolicyIteration(Algorithm):
 
         
 class REINFORCE(Algorithm):
-    # Projected Policy Gradient Ascent using REINFORCE
+    
     def __init__(self, env: Tabular, horizon: int, n_trajectories: int):
         pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, pi, 'REINFORCE-PPG')
 
 
 class PQA(Algorithm):
-    # Projected Q-Ascent using MC rollouts to estimate Q
+    
     def __init__(self, env: Tabular, horizon: int, n_trajectories: int):
         pi = DirectPolicy(env.observation_space, env.action_space)
         super().__init__(env, horizon, n_trajectories, pi, 'PQA')
@@ -212,7 +212,7 @@ class PQA(Algorithm):
         pk = self.pi.probas
 
         dk = np.max(np.linalg.norm(greedy - pk, axis=1)**2 / 2)
-        if dk == 0: # CONVERGED! V* = TV*
+        if dk == 0: 
             return 0, 0
 
         lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1))
@@ -220,7 +220,7 @@ class PQA(Algorithm):
     
 
 class EQA(Algorithm):
-    # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
+    
     def __init__(self, env: Tabular, horizon: int, n_trajectories: int):
         pi = SoftmaxPolicy(env.observation_space.n, env.action_space.n)
         super().__init__(env, horizon, n_trajectories, pi, 'EQA')
@@ -236,7 +236,7 @@ class EQA(Algorithm):
         pk = self.pi.probas
 
         dk = np.max(entropy(greedy, pk, axis=1))
-        if dk == 0: # CONVERGED! V* = TV*
+        if dk == 0: 
             return 0, 0
 
         lrk = dk * lr(k) if callable(lr) else lr * dk / self.gamma**(2*(k + 1))
@@ -244,7 +244,7 @@ class EQA(Algorithm):
 
 
 class DPMD(Algorithm):
-    # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
+    
     def __init__(self, pi: Policy, name: str, env: Tabular, horizon: int = None,
                  M_l: int=None, d: int=1, M_t: int = None, M_f: int = None):
         
@@ -295,10 +295,10 @@ class DPMD(Algorithm):
         pk = self.pi.probas
 
         dk = self.divergence(greedy, pk)
-        if dk == 0: # CONVERGED! V* = TV*
+        if dk == 0: 
             return 0, 0
 
-        lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d) #TODO MAKE adaptive
+        lrk = lr(k) * dk if callable(lr) else lr * dk / self.gamma**(2*(k + 1) * self.d) 
         if np.isinf(lrk) or np.isnan(lrk):
             lrk = np.inf
         return lrk, dk
@@ -342,7 +342,7 @@ class DEQA(DPMD):
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
 
-    def divergence(self, u, v): # KL-divergence
+    def divergence(self, u, v): 
         return np.max(entropy(u, v, axis=1))
 
 
@@ -353,5 +353,5 @@ class DPQA(DPMD):
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
 
-    def divergence(self, u, v): # Total variation divergence
+    def divergence(self, u, v): 
         return np.max(np.linalg.norm(u - v, axis=1)**2 / 2)

@@ -58,7 +58,7 @@ class DirectPolicy(Policy):
         
         new = self.probabilities + lr * grad
         for i in range(self.probabilities.shape[0]):
-            projected = simplex_project_sort(new[i] - new[i].mean()) # easier projection, take away (1, 1, 1, ...)
+            projected = simplex_project_sort(new[i] - new[i].mean()) 
             self.probabilities[i] = projected
 
     
@@ -94,9 +94,9 @@ class SoftmaxPolicy(Policy):
             self.params = np.where(grad == grad.max(axis=1)[..., np.newaxis], np.inf, -np.inf)
             return
 
-        grad = grad - grad.mean(axis=1)[..., np.newaxis] # center gradient before update
+        grad = grad - grad.mean(axis=1)[..., np.newaxis] 
         new = self.params + lr * grad
-        new_centered = new - new.max(axis=1)[..., np.newaxis] # renormalize by max
+        new_centered = new - new.max(axis=1)[..., np.newaxis] 
         self.params = new_centered
 
     
@@ -126,7 +126,7 @@ class SoftmaxPolicy(Policy):
 
 @chex.dataclass(kw_only=True)
 class JPolicy(object):
-    # Returns logits associated with current 
+    
     def act(self, obs: chex.Array) -> chex.Array:
         raise NotImplementedError
 
@@ -144,7 +144,7 @@ class JDirectPolicy(JPolicy):
     params: chex.Array
 
     def act(self, obs: chex.Array) -> chex.Array:
-        return jnp.log(self.params[obs]) # assume last state is absorbing, discard
+        return jnp.log(self.params[obs]) 
     
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
         if jnp.isinf(lr):
@@ -172,18 +172,18 @@ class JDirectPolicy(JPolicy):
 
 
 @chex.dataclass(kw_only=True)
-class JSoftmaxPolicy(JPolicy): # softmax policy
+class JSoftmaxPolicy(JPolicy): 
     logits: chex.Array
 
-    def act(self, obs: chex.Array) -> chex.Array: # needs state indices
+    def act(self, obs: chex.Array) -> chex.Array: 
         return self.logits[obs]
 
 
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
-        grad = grad - grad.mean(axis=1)[..., jnp.newaxis] #  center gradient before update
+        grad = grad - grad.mean(axis=1)[..., jnp.newaxis] 
         
         new = self.logits + lr * grad
-        new_centered = new - new.max(axis=1)[..., jnp.newaxis] # renormalize by max
+        new_centered = new - new.max(axis=1)[..., jnp.newaxis] 
 
         argmax = jnp.where(grad == grad.max(axis=1)[..., jnp.newaxis], 0, -jnp.inf)
         logits = jnp.where(jnp.isinf(lr), argmax, new_centered)
@@ -206,7 +206,7 @@ class JSoftmaxPolicy(JPolicy): # softmax policy
 
 
 @chex.dataclass(kw_only=True)
-class JNeuralPolicy(JPolicy): # softmax policy
+class JNeuralPolicy(JPolicy): 
     net: [chex.Array]
     embedding: chex.Array
 
@@ -219,15 +219,15 @@ class JNeuralPolicy(JPolicy): # softmax policy
 
 
     def update(self, grad: chex.Array, lr: float) -> JPolicy:
-        grad = grad - grad.mean(axis=1)[..., jnp.newaxis] #  center gradient before update
+        grad = grad - grad.mean(axis=1)[..., jnp.newaxis] 
         
         new = self.logits + lr * grad
-        new_centered = new - new.max(axis=1)[..., jnp.newaxis] # renormalize by max
+        new_centered = new - new.max(axis=1)[..., jnp.newaxis] 
 
         argmax = jnp.where(grad == grad.max(axis=1)[..., jnp.newaxis], jnp.inf, -jnp.inf)
         logits = jnp.where(jnp.isinf(lr), argmax, new_centered)
 
-        return JNeuralPolicy(net=self.net, embedding=self.embedding) # TODO
+        return JNeuralPolicy(net=self.net, embedding=self.embedding) 
 
 
     @property

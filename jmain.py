@@ -12,11 +12,11 @@ from helper import random_simplex, parse_args
 
 def run(d=1):
     if alg == PGMCTS:
-        agent = alg(env, horizon=H, depth=d, M_t=M_t, M_l=M_l) # time per iteration 0.3 s
+        agent = alg(env, horizon=H, depth=d, M_t=M_t, M_l=M_l) 
     elif alg in [JDPQA, JDEQA]:
         agent = alg(env, horizon=H, d=d, M_t=M_t, M_l=M_l, M_f=M_f)
     else:
-        agent = alg(env, horizon=H, n_trajectories=M_f) # time per iteration ~10s
+        agent = alg(env, horizon=H, n_trajectories=M_f) 
         
     start = time.time()
     info_dpmd = agent.learn(epochs, exact=exact, use_wandb=use_wandb,
@@ -71,15 +71,15 @@ if __name__ == '__main__':
     R = random_simplex((size, 4))
     mu = random_simplex((size,))
     
-    #env = JTabular(P, R, mu, gamma, 'Stochastic')
-    #env = Trap(size, gamma)
-    #env = DeepSea(size, gamma, deterministic=True)
-    #env = JDeepsea(size, gamma)
+    
+    
+    
+    
     env = Catch(gamma, rows=13, columns=13)
 
-    #env = Gridworld(gamma, rows=48, columns=48, deterministic=True, seed=seed)
+    
 
-    # Formula from (Johnson 2023)
+    
     epsilon = 1e-4
     delta = 0.01
     K = np.log(4 / ((1 - gamma) * epsilon)) / (1 - gamma)
@@ -93,19 +93,19 @@ if __name__ == '__main__':
     print(f'M_f: {M_f}')
 
 
-    H = size # fixed for deepsea because larger doesn't matter
-    M_f = 1 # deterministic
-    M_t = 50 # deterministic
-    M_l = 128 # Winnicki says we can do one episode
+    H = size 
+    M_f = 1 
+    M_t = 50 
+    M_l = 128 
 
     infos = []
     
-    # TRY WITH LOGISTIC LEARNING RATE
+    
 
     a = lr
-    #lr = lambda k: a / (1 + np.exp(-10 * (k - epochs / 3) / epochs))
-    #lr = lambda k: 0.1
-    #ys = [lr(k) for k in range(epochs)]
+    
+    
+    
 
     for _ in range(n_agents):
         print(f'Running {alg.__name__} with depth {d}')
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     for df in infos:
         df.suboptimality.plot()
 
-    #plt.yscale('log')
+    
     plt.show()
 
     print('Finished, exiting...')

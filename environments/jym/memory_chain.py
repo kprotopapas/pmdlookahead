@@ -11,13 +11,13 @@ from gymnax.environments.bsuite.memory_chain import EnvParams, EnvState
 from environments.jym import JTabular
 
 
-# Wrapper for the MemoryChain environment with explicit P, R, µ matrices and without state resets at the end of episode
+
 class MemoryChain(JTabular):
     def __init__(self, gamma: float, num_bits: int = 1, memory_length: int = 5):
         env, params = gymnax.make('MemoryChain-bsuite')
         self.env = env
         self.params: EnvParams = params.replace(memory_length=memory_length)
-        num_states = 2**num_bits * num_bits * params.memory_length + 1 # 2^num_bits contexts * num_bits queries * memory_length timesteps + terminal
+        num_states = 2**num_bits * num_bits * params.memory_length + 1 
         
         
         def step_state(s, a):
@@ -48,7 +48,7 @@ class MemoryChain(JTabular):
         R = over_both(states, actions)
 
 
-        mu = jnp.zeros((num_states, )) # TODO
+        mu = jnp.zeros((num_states, )) 
 
         name = f'Catch-Wrapper'
         super().__init__(P, R, mu, gamma, name)

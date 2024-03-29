@@ -58,7 +58,7 @@ class Tabular(gym.Env):
         return self.value(pi.probas)
 
 
-    # Returns the value function of a policy pi (discount factor gamma)
+    
     def value(self, probas):
         gamma = self.gamma
         P_pi = np.sum(probas * self.P, axis=2)
@@ -73,7 +73,7 @@ class Tabular(gym.Env):
         return Q
     
 
-    # Bellman maximisation operator (VI operator)
+    
     def bellman(self, V):
         gamma = self.gamma
         next_V = np.sum(self.P * V[..., np.newaxis, np.newaxis], axis=0)
@@ -82,7 +82,7 @@ class Tabular(gym.Env):
         return TV
     
 
-    # Finds the optimal value function via policy iteration
+    
     def optimal(self):
         Q = np.zeros_like(self.R)
 
@@ -99,7 +99,7 @@ class Tabular(gym.Env):
         return Q_new
     
 
-    # Finds the optimal value function via value iteration
+    
     def optimal_vi(self):
         gamma = self.gamma
         V = np.ones((self.n_obs, )) / (1 - gamma)
@@ -145,8 +145,8 @@ class Tabular(gym.Env):
 
 
 class Trap(Tabular):
-    # Defines a Trap environment, where an agent needs to sacrifice immediate reward for large future reward
-    # Reward structure looks like: [large, -1, ..., -1, -1, 0, +1, +1, ..., +1, -large] (then normalized to 1)
+    
+    
     def __init__(self, size: int, gamma: float, noop: bool = False):
         self.size = size
         length = 2 * size + 1
@@ -177,7 +177,7 @@ class Trap(Tabular):
         R[-1, -1] = self.values[-1]
 
         if noop:
-            R[:, 1] = self.values # NO OP
+            R[:, 1] = self.values 
 
         R = R / np.max(np.abs(R))
 
@@ -198,8 +198,8 @@ class Trap(Tabular):
 
 
 class Gridworld(Tabular):
-    # Defines a size * size grid with a random target state (absorbing)
-    # Reward of -1 for all states except for target
+    
+    
     def __init__(self, size: int, gamma: float):
         self.size = size
 
@@ -250,18 +250,18 @@ class Gridworld(Tabular):
         grid_str[y, x] = 'X'
 
         y, x = np.argwhere(self.grid == self.state)[0]
-        grid_str[y, x] = '#'
+        grid_str[y, x] = '
 
         return str(grid_str)
 
 
 class Deepsea(Tabular):
-    # Deepsea environment from bsuite
+    
     def __init__(self, size: int, gamma: float):
         self.size = size
 
         n_obs = size**2 + 1
-        n_act = 2 # go left or right
+        n_act = 2 
         self.grid = np.arange(size**2).reshape((size, size))
 
         mu = np.zeros((n_obs, ))
@@ -269,7 +269,7 @@ class Deepsea(Tabular):
 
         P = np.zeros((n_obs, n_obs, n_act))
         R = np.zeros((n_obs, n_act))
-        R[:, 1] = -0.1 * gamma**size / size # TODO penalty different to bsuite...
+        R[:, 1] = -0.1 * gamma**size / size 
         R[-2, 1] = 1
         R[-1, :] = 0
 
@@ -311,7 +311,7 @@ class Deepsea(Tabular):
 
         if self.state != self.size**2:
             y, x = np.argwhere(self.grid == self.state)[0]
-            grid_str[y, x] = '#'
+            grid_str[y, x] = '
 
         return str(grid_str)
 
@@ -321,7 +321,7 @@ class Deepsea(Tabular):
     
 
 class Cliffwalk(Tabular):
-    # Cliffwalk environment from Sutton & Barto: Reinforcement Learning, an Introduction
+    
     def __init__(self, width: int, gamma: float, height: int = 4):
         self.width = width
         self.height = height
@@ -345,7 +345,7 @@ class Cliffwalk(Tabular):
                     R[s, a] = -100
         
         
-        P[:, self.target, :] = 1 * (np.arange(n_obs) == self.target)[..., np.newaxis] # target is absorbing
+        P[:, self.target, :] = 1 * (np.arange(n_obs) == self.target)[..., np.newaxis] 
         R[self.target, :] = 0
         
         R = R / np.max(np.abs(R))
@@ -385,7 +385,7 @@ class Cliffwalk(Tabular):
         grid_str[0, 1:-1] = '^'
 
         y, x = np.argwhere(self.grid == self.state)[0]
-        grid_str[y, x] = '#'
+        grid_str[y, x] = '
 
 
         return str(grid_str)

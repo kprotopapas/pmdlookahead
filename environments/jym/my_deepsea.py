@@ -112,7 +112,7 @@ class JDeepsea(JTabular):
     
     @partial(jax.jit, static_argnums=(0,))
     def inverse(self, state_ind: int) -> tuple[chex.Array, EnvState]:
-        row = jnp.floor((jnp.sqrt(8 * state_ind + 1) - 1) / 2).astype(jnp.int32) # returns closest triangle root
+        row = jnp.floor((jnp.sqrt(8 * state_ind + 1) - 1) / 2).astype(jnp.int32) 
         tri = row * (row + 1) // 2
         col = jax.lax.select(row >= self.size, 0, state_ind - tri)
 

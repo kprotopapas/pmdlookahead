@@ -156,7 +156,7 @@ class JAlgorithm(object):
         observations, actions, rewards = ys
         observations = jnp.vstack(([obs[jnp.newaxis, ...], observations]))
 
-        return observations, actions, rewards # TODO for more advanced, flag "done" states as invalid...
+        return observations, actions, rewards 
     
     @partial(jax.jit, static_argnums=(0, 2))
     def debug(self, key: chex.PRNGKey, env: JTabular, params: EnvParams,
@@ -180,7 +180,7 @@ class JAlgorithm(object):
         observations = jnp.vstack(([obs, observations]))
 
 
-        return observations, actions, rewards, beliefs # TODO for more advanced, flag "done" states as invalid...
+        return observations, actions, rewards, beliefs 
 
 
     @partial(jax.jit, static_argnums=(0, 2))
@@ -244,13 +244,13 @@ class JPolicyIteration(JAlgorithm):
 
 
 class JREINFORCE(JAlgorithm):
-    # Projected Policy Gradient Ascent using REINFORCE
+    
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int, pi: JPolicy):
         super().__init__(env, horizon, n_trajectories, pi, 'JREINFORCE')
 
 
 class JPQA(JAlgorithm):
-    # Projected Q-Ascent using MC rollouts to estimate Q
+    
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int):
         pi = JDirectPolicy.uniform(env.num_states, env.num_actions)
         super().__init__(env, horizon, n_trajectories, pi, 'JPQA')
@@ -262,7 +262,7 @@ class JPQA(JAlgorithm):
         pk = self.pi.probas
 
         dk = np.max(np.linalg.norm(greedy - pk, axis=1)**2 / 2)
-        if dk == 0: # CONVERGED! V* = TV*
+        if dk == 0: 
             return 0, 0
         
         lrk = dk / self.env.gamma**(2*(k + 1))
@@ -272,7 +272,7 @@ class JPQA(JAlgorithm):
     
 
 class JEQA(JAlgorithm):
-    # Exponentiated Q-Ascent (NPG) using MC rollouts to estimate Q
+    
     def __init__(self, env: JTabular, horizon: int, n_trajectories: int):
         pi = JSoftmaxPolicy.uniform(env.num_states, env.num_actions)
         super().__init__(env, horizon, n_trajectories, pi, 'JEQA')
@@ -284,7 +284,7 @@ class JEQA(JAlgorithm):
         pk = self.pi.probas
 
         dk = np.max(entropy(greedy, pk, axis=1))
-        if dk == 0: # CONVERGED! V* = TV*
+        if dk == 0: 
             return 0, 0
         
         lrk = dk / self.env.gamma**(2*(k + 1))
@@ -294,7 +294,7 @@ class JEQA(JAlgorithm):
 
 
 class JDPMD(JAlgorithm):
-    # Exponentiated Q-Ascent (NPG) using d-step lookahead to estimate Q
+    
     def __init__(self, pi: JPolicy, name: str, env: JTabular, horizon: int = None,
                  M_l: int=None, d: int=1, M_t: int = None, M_f: int = None):
         
@@ -355,10 +355,10 @@ class JDPMD(JAlgorithm):
         pk = self.pi.probas
 
         dk = self.divergence(greedy, pk)
-        if dk == 0: # CONVERGED! V* = TV*
+        if dk == 0: 
             return 0, 0
 
-        lrk = lr(k) if callable(lr) else lr * dk / self.env.gamma**(2*(k + 1) * self.d) # TODO add adaptive flag
+        lrk = lr(k) if callable(lr) else lr * dk / self.env.gamma**(2*(k + 1) * self.d) 
         if np.isinf(lrk) or np.isnan(lrk):
             lrk = np.inf
         return lrk, dk
@@ -423,7 +423,7 @@ class JDEQA(JDPMD):
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
 
-    def divergence(self, u, v): # KL-divergence
+    def divergence(self, u, v): 
         return np.max(entropy(u, v, axis=1))
 
 
@@ -435,5 +435,5 @@ class JDPQA(JDPMD):
         super().__init__(pi, name, env, horizon, M_l, d, M_t, M_f)
 
 
-    def divergence(self, u, v): # Total variation divergence
+    def divergence(self, u, v): 
         return jnp.max(jnp.linalg.norm(u - v, axis=1)**2 / 2)
